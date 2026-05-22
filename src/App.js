@@ -100,7 +100,7 @@ function Login() {
     setLoading(true); setError(''); setSuccess('');
     if (cpf.replace(/\D/g,'').length !== 11) { setError('CPF inválido.'); setLoading(false); return; }
     if (phone.replace(/\D/g,'').length < 10) { setError('Telefone inválido.'); setLoading(false); return; }
-    const { data, error } = await supabase.auth.signUp({
+    const { error }= await supabase.auth.signUp({
   email,
   password,
   options: {
@@ -224,13 +224,7 @@ function Sidebar({ page, setPage, user, onLogout }) {
   );
 }
 
-function Toggle2({ on, onClick }) {
-  return (
-    <button className={`toggle ${on ? 'on' : 'off'}`} onClick={e => { e.stopPropagation(); onClick(); }}>
-      <div className="toggle-dot" />
-    </button>
-  );
-}
+
 
 function Dashboard({ devices, setPage }) {
   const [scenes, setScenes] = useState([
