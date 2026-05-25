@@ -6,22 +6,33 @@ import './App.css';
 const API = 'https://dudufritzs-projects-production.up.railway.app';
 
 // ── LOGO SVG ─────────────────────────────────────────────────
-// Ícone da casa iHome (teal + branco para fundo escuro)
+// Ícone da casa iHome fiel à identidade visual
 function HouseIcon({ size = 80 }) {
   const teal = '#00AECC';
-  const light = 'rgba(255,255,255,0.92)';
   return (
-    <svg width={size} height={size} viewBox="0 0 140 130" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Telhado */}
-      <polygon points="70,4 2,58 138,58" fill={light}/>
-      {/* Pilar esquerdo teal — o "i" do iHome */}
-      <rect x="14" y="52" width="30" height="74" fill={teal}/>
-      {/* Pilar direito — parte do "H" */}
-      <rect x="96" y="52" width="30" height="74" fill={light}/>
-      {/* Barra horizontal do "H" */}
-      <rect x="14" y="84" width="112" height="20" fill={light}/>
+    <svg width={size} height={size * 0.92} viewBox="0 0 160 148" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Interior escuro da casa */}
+      <rect x="10" y="50" width="140" height="98" fill="rgba(8,10,18,0.85)"/>
+
+      {/* Pilar teal — o "i" — sobe acima do telhado */}
+      <rect x="10" y="4" width="40" height="144" fill={teal}/>
+
+      {/* H branco: pilar direito */}
+      <rect x="102" y="56" width="34" height="86" fill="white"/>
+      {/* H branco: barra horizontal */}
+      <rect x="50" y="88" width="86" height="22" fill="white"/>
+      {/* H branco: pilar esquerdo (leve sobre o teal) */}
+      <rect x="10" y="56" width="40" height="86" fill="rgba(255,255,255,0.18)"/>
+
+      {/* Telhado — outline em V, branco */}
+      <polyline
+        points="0,60 80,4 160,60"
+        stroke="white" strokeWidth="14"
+        fill="none" strokeLinejoin="round" strokeLinecap="round"
+      />
+
       {/* Pequeno acento teal na base */}
-      <rect x="14" y="130" width="14" height="6" fill={teal}/>
+      <rect x="10" y="146" width="14" height="2" fill={teal}/>
     </svg>
   );
 }
@@ -30,15 +41,15 @@ function HouseIcon({ size = 80 }) {
 function LoginLogo() {
   const teal = '#00AECC';
   return (
-    <div style={{ textAlign: 'center', marginBottom: 28 }}>
-      <HouseIcon size={88} />
-      <div style={{ marginTop: 10 }}>
-        <span style={{ color: teal, fontSize: 26, fontWeight: 800 }}>i</span>
-        <span style={{ color: '#fff', fontSize: 26, fontWeight: 800 }}>home</span>
+    <div style={{ textAlign: 'center', marginBottom: 32 }}>
+      <HouseIcon size={110} />
+      <div style={{ marginTop: 14 }}>
+        <span style={{ color: teal, fontSize: 30, fontWeight: 800, lineHeight: 1 }}>i</span>
+        <span style={{ color: '#fff', fontSize: 30, fontWeight: 800, lineHeight: 1 }}>home</span>
       </div>
-      <div style={{ fontSize: 12, marginTop: 4 }}>
-        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Automação </span>
-        <span style={{ color: teal }}>residencial</span>
+      <div style={{ fontSize: 13, marginTop: 5 }}>
+        <span style={{ color: 'rgba(255,255,255,0.45)' }}>Automação </span>
+        <span style={{ color: teal, fontWeight: 600 }}>residencial</span>
       </div>
     </div>
   );
@@ -49,13 +60,13 @@ function SidebarLogo() {
   const teal = '#00AECC';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
-      <HouseIcon size={32} />
+      <HouseIcon size={36} />
       <div>
         <div style={{ lineHeight: 1 }}>
           <span style={{ color: teal, fontSize: 16, fontWeight: 800 }}>i</span>
           <span style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>home</span>
         </div>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, letterSpacing: '0.04em' }}>residencial</div>
+        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, letterSpacing: '0.05em' }}>residencial</div>
       </div>
     </div>
   );
@@ -174,16 +185,10 @@ function Login() {
     setLoading(false);
   };
 
-  const titles = { login: 'Acesse sua conta', register: 'Criar nova conta', forgot: 'Redefinir senha' };
-  const subtitles = { login: 'Bem-vindo de volta à sua casa inteligente.', register: 'Preencha os dados para começar.', forgot: 'Informe seu e-mail para receber o link de redefinição.' };
-
   return (
     <div className="login-page">
       <div className="login-box">
         <LoginLogo />
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{titles[mode]}</div>
-        <div className="login-subtitle">{subtitles[mode]}</div>
-
         <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleForgot} className="login-form">
           {mode === 'register' && (
             <div className="login-field">
