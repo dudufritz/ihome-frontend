@@ -129,10 +129,19 @@ body { background: #0B0F19; color: #fff; min-height: 100vh; }
 
 /* Campo de senha com botão olho */
 .pw-wrap { position: relative; }
-.pw-wrap input { padding-right: 44px; width: 100%; }
-.pw-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.28); cursor: pointer; padding: 4px; display: flex; align-items: center; line-height: 0; transition: color .15s; }
-.pw-eye:hover { color: rgba(255,255,255,0.6); }
+.pw-wrap input { background: #141929; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 44px 12px 14px; color: #fff; font-size: 14px; outline: none; transition: border .15s; width: 100%; box-sizing: border-box; }
+.pw-wrap input:focus { border-color: #3B7EFF; }
+.pw-wrap input::placeholder { color: rgba(255,255,255,0.2); }
+.pw-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer; padding: 4px; display: flex; align-items: center; line-height: 0; transition: color .15s; }
+.pw-eye:hover { color: rgba(255,255,255,0.7); }
 .pw-eye svg { width: 17px; height: 17px; }
+/* Evitar fundo branco do autofill do navegador */
+.login-field input:-webkit-autofill,
+.login-field input:-webkit-autofill:hover,
+.login-field input:-webkit-autofill:focus,
+.pw-wrap input:-webkit-autofill,
+.pw-wrap input:-webkit-autofill:hover,
+.pw-wrap input:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 30px #141929 inset !important; -webkit-text-fill-color: #fff !important; caret-color: #fff; }
 
 /* Select estilizado */
 .styled-select { width: 100%; padding: 12px 14px; background: #141929; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #fff; font-size: 14px; outline: none; transition: border .15s; appearance: none; cursor: pointer; }
