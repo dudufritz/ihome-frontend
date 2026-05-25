@@ -5,62 +5,102 @@ import './App.css';
 
 const API = 'https://dudufritzs-projects-production.up.railway.app';
 
-const ICON_MAP = {
-  'detector de inundação': '💧', 'flooding': '💧', 'vazamento': '💧',
-  'interruptor': '💡', 'switch': '💡', 'luz': '💡', 'light': '💡',
-  'tomada': '🔌', 'socket': '🔌', 'plug': '🔌',
-  'câmera': '📷', 'camera': '📷',
-  'ar condicionado': '❄️', 'air condition': '❄️',
-  'sensor de porta': '🚪', 'door': '🚪', 'contact': '🚪',
-  'fumaça': '🔥', 'smoke': '🔥',
-  'movimento': '👁️', 'motion': '👁️',
-  'infravermelho': '📺', 'infrared': '📺', 'decodificador': '📺', 'tv': '📺',
-  'temperatura': '🌡️', 'thermostat': '🌡️',
-  'gateway': '🌐', 'portal': '🌐',
-  'disjuntor': '⚡', 'breaker': '⚡',
-  'portão': '🚗',
-  'controle remoto': '🎮', 'universal': '🎮',
-};
-
-const COLOR_MAP = {
-  'detector de inundação': '#3B7EFF', 'flooding': '#3B7EFF',
-  'interruptor': '#eab308', 'luz': '#eab308', 'switch': '#eab308',
-  'tomada': '#fb923c', 'socket': '#fb923c',
-  'câmera': '#a78bfa', 'camera': '#a78bfa',
-  'ar condicionado': '#38bdf8',
-  'sensor de porta': '#22c55e', 'door': '#22c55e', 'contact': '#22c55e',
-  'fumaça': '#ef4444', 'smoke': '#ef4444',
-  'infravermelho': '#94a3b8', 'decodificador': '#94a3b8',
-  'portão': '#f97316', 'breaker': '#f97316',
-};
-
-function getIcon(cat) {
-  if (!cat) return '📱';
-  const c = cat.toLowerCase();
-  for (const [key, val] of Object.entries(ICON_MAP)) if (c.includes(key)) return val;
-  return '📱';
-}
-function getColor(cat) {
-  if (!cat) return '#3B7EFF';
-  const c = cat.toLowerCase();
-  for (const [key, val] of Object.entries(COLOR_MAP)) if (c.includes(key)) return val;
-  return '#3B7EFF';
-}
-function isTogglable(cat) {
-  if (!cat) return false;
-  const c = cat.toLowerCase();
-  return ['interruptor','switch','tomada','socket','luz','light','ar condicionado','disjuntor','breaker'].some(k => c.includes(k));
-}
-
-function Toggle({ on, onClick }) {
+// ── LOGO SVG ─────────────────────────────────────────────────
+// Recriação fiel da identidade visual iHome Residencial
+function LogoMark({ width = 52 }) {
+  const color = '#00B2CC';
+  const h = width * 3.1;
   return (
-    <button className={`toggle ${on ? 'on' : 'off'}`} onClick={e => { e.stopPropagation(); onClick(); }}>
-      <div className="toggle-dot" />
-    </button>
+    <svg width={width} height={h} viewBox="0 0 100 310" fill={color} xmlns="http://www.w3.org/2000/svg">
+      {/* Ponto do "i" — retângulo com corte diagonal no canto superior-esquerdo */}
+      <polygon points="32,0 100,0 100,72 0,72 0,40" />
+      {/* Corpo principal do "i" */}
+      <rect x="30" y="94" width="62" height="165" rx="7" />
+      {/* Acento inferior esquerdo */}
+      <rect x="0" y="272" width="20" height="38" rx="4" />
+    </svg>
   );
 }
 
-// ── LOGIN ─────────────────────────────────────────────────
+// Logo completa para a tela de login
+function LoginLogo() {
+  return (
+    <div style={{ textAlign: 'center', marginBottom: 28 }}>
+      <LogoMark width={58} />
+      <div style={{ color: '#00B2CC', fontSize: 15, fontWeight: 700, letterSpacing: '0.18em', marginTop: 14 }}>
+        residencial
+      </div>
+    </div>
+  );
+}
+
+// Logo compacta para a sidebar
+function SidebarLogo() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 8px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
+      <LogoMark width={22} />
+      <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.3px', color: '#fff' }}>iHome</span>
+    </div>
+  );
+}
+
+// ── ÍCONES SVG ────────────────────────────────────────────────
+const Icons = {
+  dashboard:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
+  devices:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  automations: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+  alerts:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+  cameras:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
+  status:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  settings:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
+  logout:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  eyeOn:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  eyeOff:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
+};
+
+// ── ÍCONE DE DISPOSITIVO ──────────────────────────────────────
+function DeviceIcon({ category, size = 20, color = 'currentColor' }) {
+  const c = (category || '').toLowerCase();
+  let icon;
+  if (c.includes('interruptor') || c.includes('switch') || c.includes('luz') || c.includes('light')) {
+    icon = <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21h6M12 3a6 6 0 016 6c0 3.5-2 5.5-3 6.5H9C8 15.5 6 13.5 6 9a6 6 0 016-6z"/><line x1="9" y1="18" x2="15" y2="18"/></svg>;
+  } else if (c.includes('tomada') || c.includes('socket') || c.includes('plug')) {
+    icon = <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="10" y1="6" x2="10" y2="4"/><line x1="14" y1="6" x2="14" y2="4"/></svg>;
+  } else if (c.includes('camera') || c.includes('cam') || c.includes('câmera')) {
+    icon = <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>;
+  } else if (c.includes('ar') || c.includes('condicionado')) {
+    icon = <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="7" rx="2"/><line x1="8" y1="14" x2="8" y2="21"/><line x1="16" y1="14" x2="16" y2="21"/></svg>;
+  } else if (c.includes('porta') || c.includes('door')) {
+    icon = <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V5a2 2 0 012-2h14a2 2 0 012 2v16"/><line x1="7" y1="21" x2="17" y2="21"/><circle cx="14" cy="12" r="1"/></svg>;
+  } else if (c.includes('sensor') || c.includes('motion') || c.includes('movimento')) {
+    icon = <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h2M17 12h2M12 5v2M12 17v2M7.05 7.05l1.41 1.41M15.54 15.54l1.41 1.41M7.05 16.95l1.41-1.41M15.54 8.46l1.41-1.41"/><circle cx="12" cy="12" r="3"/></svg>;
+  } else {
+    icon = <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="12" r="3"/></svg>;
+  }
+  return <div style={{ width: size, height: size }}>{icon}</div>;
+}
+
+// ── CAMPO DE SENHA COM OLHINHO ────────────────────────────────
+function PasswordField({ value, onChange, placeholder, required, minLength }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="pw-wrap">
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        minLength={minLength}
+      />
+      <button type="button" className="pw-eye" onClick={() => setShow(s => !s)} tabIndex={-1}>
+        {show ? Icons.eyeOff : Icons.eyeOn}
+      </button>
+    </div>
+  );
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────
 function Login() {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
@@ -73,15 +113,14 @@ function Login() {
   const [success, setSuccess] = useState('');
 
   const formatCpf = v => {
-    v = v.replace(/\D/g,'');
+    v = v.replace(/\D/g, '');
     if (v.length <= 3) return v;
     if (v.length <= 6) return v.slice(0,3)+'.'+v.slice(3);
     if (v.length <= 9) return v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
     return v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);
   };
-
   const formatPhone = v => {
-    v = v.replace(/\D/g,'');
+    v = v.replace(/\D/g, '');
     if (v.length <= 2) return v;
     if (v.length <= 7) return '('+v.slice(0,2)+') '+v.slice(2);
     return '('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7,11);
@@ -91,7 +130,7 @@ function Login() {
     e.preventDefault();
     setLoading(true); setError(''); setSuccess('');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError('Email ou senha incorretos.');
+    if (error) setError('E-mail ou senha incorretos.');
     setLoading(false);
   };
 
@@ -101,18 +140,11 @@ function Login() {
     if (cpf.replace(/\D/g,'').length !== 11) { setError('CPF inválido.'); setLoading(false); return; }
     if (phone.replace(/\D/g,'').length < 10) { setError('Telefone inválido.'); setLoading(false); return; }
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone: phone.replace(/\D/g,''),
-          cpf: cpf.replace(/\D/g,''),
-        }
-      }
+      email, password,
+      options: { data: { full_name: fullName, phone: phone.replace(/\D/g,''), cpf: cpf.replace(/\D/g,'') } }
     });
     if (error) { setError(error.message); setLoading(false); return; }
-    setSuccess('Conta criada! Verifique seu email para confirmar o cadastro.');
+    setSuccess('Conta criada! Verifique seu e-mail para confirmar o cadastro.');
     setLoading(false);
   };
 
@@ -121,22 +153,19 @@ function Login() {
     setLoading(true); setError(''); setSuccess('');
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
     if (error) setError(error.message);
-    else setSuccess('Email de redefinição enviado! Verifique sua caixa de entrada.');
+    else setSuccess('E-mail de redefinição enviado! Verifique sua caixa de entrada.');
     setLoading(false);
   };
+
+  const titles = { login: 'Acesse sua conta', register: 'Criar nova conta', forgot: 'Redefinir senha' };
+  const subtitles = { login: 'Bem-vindo de volta à sua casa inteligente.', register: 'Preencha os dados para começar.', forgot: 'Informe seu e-mail para receber o link de redefinição.' };
 
   return (
     <div className="login-page">
       <div className="login-box">
-        <div className="login-logo">
-          <div className="logo-icon">🏠</div>
-          <span className="logo-text">iHome</span>
-        </div>
-        <div className="login-subtitle">
-          {mode === 'login'    && 'Sua casa inteligente. Sua vida mais segura.'}
-          {mode === 'register' && 'Crie sua conta para começar.'}
-          {mode === 'forgot'   && 'Informe seu email para redefinir a senha.'}
-        </div>
+        <LoginLogo />
+        <div style={{ fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{titles[mode]}</div>
+        <div className="login-subtitle">{subtitles[mode]}</div>
 
         <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleForgot} className="login-form">
           {mode === 'register' && (
@@ -146,31 +175,29 @@ function Login() {
             </div>
           )}
           <div className="login-field">
-            <label>Email</label>
+            <label>E-mail</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
           </div>
-          {mode === 'register' && (
-            <>
-              <div className="login-field">
-                <label>CPF</label>
-                <input type="text" value={cpf} onChange={e => setCpf(formatCpf(e.target.value))} placeholder="000.000.000-00" maxLength={14} required />
-              </div>
-              <div className="login-field">
-                <label>Telefone</label>
-                <input type="text" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} required />
-              </div>
-            </>
-          )}
+          {mode === 'register' && <>
+            <div className="login-field">
+              <label>CPF</label>
+              <input type="text" value={cpf} onChange={e => setCpf(formatCpf(e.target.value))} placeholder="000.000.000-00" maxLength={14} required />
+            </div>
+            <div className="login-field">
+              <label>Telefone</label>
+              <input type="text" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} required />
+            </div>
+          </>}
           {mode !== 'forgot' && (
             <div className="login-field">
               <label>Senha</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+              <PasswordField value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required minLength={6} />
             </div>
           )}
           {error   && <div className="login-error">{error}</div>}
           {success && <div className="login-success">{success}</div>}
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Enviar email'}
+            {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Enviar link'}
           </button>
         </form>
 
@@ -187,82 +214,111 @@ function Login() {
   );
 }
 
-// ── SIDEBAR ───────────────────────────────────────────────
+// ── SIDEBAR ───────────────────────────────────────────────────
 function Sidebar({ page, setPage, user, onLogout }) {
   const items = [
-    { id: 'dashboard',   label: 'Visão Geral',  icon: '⊞' },
-    { id: 'devices',     label: 'Dispositivos', icon: '⚡' },
-    { id: 'automations', label: 'Automação',    icon: '⚙️' },
-    { id: 'alerts',      label: 'Alertas',      icon: '🔔' },
-    { id: 'cameras',     label: 'Câmeras',      icon: '📷' },
-    { id: 'status',      label: 'Status',       icon: '📊' },
-    { id: 'settings',    label: 'Configurações',icon: '🔑' },
+    { id: 'dashboard',   label: 'Visão Geral',   icon: Icons.dashboard   },
+    { id: 'devices',     label: 'Dispositivos',  icon: Icons.devices     },
+    { id: 'automations', label: 'Automação',     icon: Icons.automations },
+    { id: 'alerts',      label: 'Alertas',       icon: Icons.alerts      },
+    { id: 'cameras',     label: 'Câmeras',       icon: Icons.cameras     },
+    { id: 'status',      label: 'Status',        icon: Icons.status      },
+    { id: 'settings',    label: 'Configurações', icon: Icons.settings    },
   ];
   return (
     <div className="sidebar">
-      <div className="logo">
-        <div className="logo-icon">🏠</div>
-        <span className="logo-text">iHome</span>
-      </div>
+      <SidebarLogo />
       {items.map(i => (
         <button key={i.id} className={`nav-item ${page===i.id?'active':''}`} onClick={() => setPage(i.id)}>
           <span className="nav-icon">{i.icon}</span>{i.label}
         </button>
       ))}
-      <div style={{marginTop:'auto'}}>
-        <div style={{fontSize:11,color:'rgba(255,255,255,0.25)',padding:'8px 12px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user?.email}</div>
-        <button className="nav-item" onClick={onLogout} style={{color:'#ef4444'}}>
-          <span className="nav-icon">🚪</span>Sair
+      <div style={{ marginTop: 'auto' }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', padding: '8px 12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {user?.email}
+        </div>
+        <button className="nav-item" onClick={onLogout} style={{ color: '#ef4444' }}>
+          <span className="nav-icon">{Icons.logout}</span>Sair
         </button>
       </div>
     </div>
   );
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────
+// ── TOGGLE ────────────────────────────────────────────────────
+function Toggle({ on, onClick }) {
+  return (
+    <button className={`toggle ${on ? 'on' : 'off'}`} onClick={e => { e.stopPropagation(); onClick(); }}>
+      <div className="toggle-dot" />
+    </button>
+  );
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
 function Dashboard({ devices, setPage }) {
   const [scenes, setScenes] = useState([
-    { key:'casa',   name:'Casa',   icon:'🏠', active:true  },
-    { key:'dormir', name:'Dormir', icon:'🌙', active:false },
-    { key:'fora',   name:'Fora',   icon:'💼', active:false },
-    { key:'cinema', name:'Cinema', icon:'📺', active:false },
+    { key: 'casa',   name: 'Casa',   label: 'Em casa'  },
+    { key: 'dormir', name: 'Dormir', label: 'Descanso' },
+    { key: 'fora',   name: 'Fora',   label: 'Ausente'  },
+    { key: 'cinema', name: 'Cinema', label: 'Cinema'   },
   ]);
+  const [activeScene, setActiveScene] = useState('casa');
   const online = devices.filter(d => d.online).length;
   const favs = devices.filter(d => d.online).slice(0, 3);
-  const activateScene = key => setScenes(s => s.map(x => ({...x, active: x.key===key})));
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <div className="page-title">Olá, Dudu! 👋</div>
-          <div className="page-subtitle">Tudo seguro e funcionando bem.</div>
+          <div className="page-title">Painel Principal</div>
+          <div className="page-subtitle">Tudo seguro e funcionando.</div>
         </div>
-        <div className="icon-btn">🔔</div>
       </div>
-      <div className="house-status">
-        <div className="house-status-text"><h3>Tudo seguro</h3><p>Nenhum risco detectado no momento.</p></div>
-        <div className="shield">✅</div>
+
+      {/* Status geral */}
+      <div className="house-status" style={{ marginBottom: 20 }}>
+        <div className="house-status-text">
+          <h3>Tudo seguro</h3>
+          <p>Nenhum risco detectado no momento.</p>
+        </div>
+        <div className="shield" style={{ background: 'rgba(34,197,94,0.12)' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
       </div>
+
+      {/* Cenários */}
       <div className="section-hd"><span className="section-title">Cenários</span><button className="section-link">Editar</button></div>
-      <div className="scene-grid">
+      <div className="scene-grid" style={{ marginBottom: 20 }}>
         {scenes.map(s => (
-          <div key={s.key} className={`scene-card ${s.active?'active':''}`} onClick={() => activateScene(s.key)}>
-            <span className="scene-icon">{s.icon}</span>
-            <div className="scene-name" style={{color:s.active?'#fff':'rgba(255,255,255,0.4)'}}>{s.name}</div>
-            <div className="scene-status" style={{color:s.active?'#3B7EFF':'rgba(255,255,255,0.25)'}}>{s.active?'Ativo':'Inativo'}</div>
+          <div key={s.key} className={`scene-card ${activeScene===s.key?'active':''}`} onClick={() => setActiveScene(s.key)}>
+            <div className="scene-name" style={{ color: activeScene===s.key?'#fff':'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: 700 }}>{s.name}</div>
+            <div className="scene-status" style={{ color: activeScene===s.key?'#3B7EFF':'rgba(255,255,255,0.22)', fontSize: 10, marginTop: 4 }}>{activeScene===s.key?'Ativo':s.label}</div>
           </div>
         ))}
       </div>
-      <div className="section-hd"><span className="section-title">Dispositivos Favoritos</span><button className="section-link" onClick={() => setPage('devices')}>Ver todos</button></div>
-      <div className="grid-3" style={{marginBottom:16}}>
+
+      {/* Favoritos */}
+      <div className="section-hd">
+        <span className="section-title">Dispositivos Online</span>
+        <button className="section-link" onClick={() => setPage('devices')}>Ver todos</button>
+      </div>
+      <div className="grid-3" style={{ marginBottom: 20 }}>
         {favs.map(d => (
-          <div className="card" key={d.id} style={{textAlign:'center',padding:14}}>
-            <div style={{fontSize:26,marginBottom:6}}>{getIcon(d.category_name)}</div>
-            <div style={{fontSize:12,fontWeight:600,color:'#fff',marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.name}</div>
-            <div style={{fontSize:11,color:getColor(d.category_name),fontWeight:600}}>Online</div>
+          <div className="card" key={d.id} style={{ textAlign: 'center', padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <DeviceIcon category={d.category_name} size={22} color="#3B7EFF" />
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+            <div style={{ fontSize: 11, color: '#22c55e', fontWeight: 600, marginTop: 3 }}>Online</div>
           </div>
         ))}
+        {favs.length === 0 && (
+          <div className="card" style={{ gridColumn: '1/-1', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13, padding: 20 }}>
+            Nenhum dispositivo online no momento.
+          </div>
+        )}
       </div>
+
+      {/* Métricas */}
       <div className="grid-4">
         <div className="card"><div className="card-label">Dispositivos</div><div className="card-value">{devices.length}</div><div className="card-sub">{online} online</div></div>
         <div className="card"><div className="card-label">Consumo hoje</div><div className="card-value" style={{fontSize:18}}>12,4 kWh</div><div className="card-sub">15% abaixo da média</div></div>
@@ -273,25 +329,29 @@ function Dashboard({ devices, setPage }) {
   );
 }
 
-// ── DEVICES ───────────────────────────────────────────────
+// ── DISPOSITIVOS ──────────────────────────────────────────────
 function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
   const [filter, setFilter] = useState('Todos');
   const tabs = ['Todos','Sala','Quarto','Cozinha','Externa'];
-  const filtered = filter === 'Todos' ? devices : devices.filter(d => d.name?.toLowerCase().includes(filter.toLowerCase()) || d.room?.toLowerCase().includes(filter.toLowerCase()));
+  const filtered = filter === 'Todos'
+    ? devices
+    : devices.filter(d => d.room?.toLowerCase().includes(filter.toLowerCase()));
 
-  if (loading) return <div className="loading">⏳ Carregando dispositivos...</div>;
+  if (loading) return <div className="loading">Carregando dispositivos...</div>;
 
   if (!tuyaConfigured) {
     return (
       <div className="page">
         <div className="page-header"><div className="page-title">Dispositivos</div></div>
-        <div className="card" style={{textAlign:'center',padding:32}}>
-          <div style={{fontSize:40,marginBottom:12}}>🔑</div>
-          <div style={{color:'#fff',fontWeight:700,fontSize:16,marginBottom:8}}>Credenciais Tuya não configuradas</div>
-          <div style={{color:'rgba(255,255,255,0.5)',fontSize:13,marginBottom:20}}>
-            Para ver e controlar seus dispositivos, você precisa cadastrar suas credenciais Tuya primeiro.
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.3 }}>
+            {Icons.settings}
           </div>
-          <button className="login-btn" onClick={() => setPage('settings')} style={{maxWidth:200,margin:'0 auto'}}>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Credenciais não configuradas</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 24 }}>
+            Para ver e controlar seus dispositivos, configure suas credenciais em Configurações.
+          </div>
+          <button className="login-btn" onClick={() => setPage('settings')} style={{ maxWidth: 200, margin: '0 auto' }}>
             Ir para Configurações
           </button>
         </div>
@@ -302,31 +362,31 @@ function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
   return (
     <div className="page">
       <div className="page-header">
-        <div><div className="page-title">Dispositivos</div><div className="page-subtitle">{devices.filter(d=>d.online).length} de {devices.length} online</div></div>
-        <div className="header-actions"><div className="icon-btn">🔍</div></div>
+        <div>
+          <div className="page-title">Dispositivos</div>
+          <div className="page-subtitle">{devices.filter(d=>d.online).length} de {devices.length} online</div>
+        </div>
       </div>
       <div className="tabs">{tabs.map(t => <button key={t} className={`tab ${filter===t?'active':''}`} onClick={() => setFilter(t)}>{t}</button>)}</div>
       {filtered.length === 0 && (
-        <div className="card" style={{textAlign:'center',padding:24,color:'rgba(255,255,255,0.4)'}}>
-          Nenhum dispositivo encontrado. Adicione dispositivos em Configurações.
+        <div className="card" style={{ textAlign: 'center', padding: 28, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+          Nenhum dispositivo encontrado. Adicione em Configurações.
         </div>
       )}
       <div className="grid-3">
         {filtered.map(d => {
-          const color = getColor(d.category_name);
-          const on = d.isControllable ? d.switch_1 === true : d.online===true;
-          const canToggle = isTogglable(d.category_name) || d.isControllable;
+          const on = d.isControllable ? d.switch_1 === true : d.online === true;
+          const color = on ? '#3B7EFF' : 'rgba(255,255,255,0.15)';
           return (
             <div className="device-card" key={d.id}>
-              <div className="dev-icon-wrap" style={{background: on ? `${color}22` : 'rgba(255,255,255,0.05)'}}>
-                <span style={{fontSize:20}}>{getIcon(d.category_name)}</span>
+              <div className="dev-icon-wrap" style={{ background: on ? 'rgba(59,126,255,0.15)' : 'rgba(255,255,255,0.04)' }}>
+                <DeviceIcon category={d.category_name} size={20} color={color} />
               </div>
               <div className="dev-name">{d.name}</div>
-              <div className="dev-category">{d.category_name}</div>
+              <div className="dev-category">{d.room || d.category_name}</div>
               <div className="dev-footer">
                 <span className={`status-badge ${on?'on':'off'}`}>{on?'Ligado':'Desligado'}</span>
-                {canToggle && <Toggle on={on} onClick={() => onToggle(d.id, on)} />}
-                {!canToggle && <span className={`status-badge ${d.online?'on':'off'}`}>{d.online?'Online':'Offline'}</span>}
+                {d.isControllable && <Toggle on={on} onClick={() => onToggle(d.id, on)} />}
               </div>
             </div>
           );
@@ -336,7 +396,7 @@ function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
   );
 }
 
-// ── CONFIGURAÇÕES ─────────────────────────────────────────
+// ── CONFIGURAÇÕES ─────────────────────────────────────────────
 function Settings({ session }) {
   const [accessId, setAccessId] = useState('');
   const [accessSecret, setAccessSecret] = useState('');
@@ -346,70 +406,49 @@ function Settings({ session }) {
   const [newDeviceId, setNewDeviceId] = useState('');
   const [newDeviceName, setNewDeviceName] = useState('');
   const [newDeviceRoom, setNewDeviceRoom] = useState('');
+  const [newProtocol, setNewProtocol] = useState('tuya');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState('success');
 
   const headers = { Authorization: `Bearer ${session.access_token}` };
 
+  const showMsg = (text, type = 'success') => { setMsg(text); setMsgType(type); setTimeout(() => setMsg(''), 4000); };
+
   useEffect(() => {
-    // Verifica se já tem credenciais salvas
     axios.get(`${API}/tuya-credentials`, { headers })
       .then(r => {
         setConfigured(r.data.configured);
-        if (r.data.configured) {
-          setAccessId(r.data.tuya_access_id || '');
-          setBaseUrl(r.data.tuya_base_url || 'https://openapi.tuyaus.com');
-        }
-      })
-      .catch(console.error);
-
-    // Carrega os dispositivos cadastrados
+        if (r.data.configured) setAccessId(r.data.tuya_access_id || '');
+      }).catch(console.error);
     axios.get(`${API}/my-devices`, { headers })
-      .then(r => setMyDevices(r.data))
-      .catch(console.error);
+      .then(r => setMyDevices(r.data)).catch(console.error);
   }, []); // eslint-disable-line
-
-  const showMsg = (text, type = 'success') => {
-    setMsg(text); setMsgType(type);
-    setTimeout(() => setMsg(''), 4000);
-  };
 
   const saveCredentials = async e => {
     e.preventDefault();
-    if (!accessSecret && !configured) {
-      showMsg('Por favor, informe o Access Secret.', 'error');
-      return;
-    }
+    if (!accessSecret && !configured) { showMsg('Informe o Access Secret.', 'error'); return; }
     setLoading(true);
     try {
-      await axios.post(`${API}/tuya-credentials`, {
-        tuya_access_id: accessId,
-        tuya_secret: accessSecret,
-        tuya_base_url: baseUrl
-      }, { headers });
-      setConfigured(true);
-      setAccessSecret('');
-      showMsg('✅ Credenciais salvas com sucesso!');
+      await axios.post(`${API}/tuya-credentials`, { tuya_access_id: accessId, tuya_secret: accessSecret, tuya_base_url: baseUrl }, { headers });
+      setConfigured(true); setAccessSecret('');
+      showMsg('Credenciais salvas com sucesso.');
     } catch (err) {
-      showMsg('❌ Erro ao salvar: ' + (err.response?.data?.error || err.message), 'error');
+      showMsg('Erro ao salvar: ' + (err.response?.data?.error || err.message), 'error');
     }
     setLoading(false);
   };
 
   const addDevice = async e => {
     e.preventDefault();
+    if (newProtocol !== 'tuya') { showMsg('Integração com ' + newProtocol + ' em desenvolvimento. Em breve disponível.', 'error'); return; }
     try {
-      const r = await axios.post(`${API}/my-devices`, {
-        tuya_id: newDeviceId.trim(),
-        name: newDeviceName.trim(),
-        room: newDeviceRoom.trim()
-      }, { headers });
+      const r = await axios.post(`${API}/my-devices`, { tuya_id: newDeviceId.trim(), name: newDeviceName.trim(), room: newDeviceRoom.trim() }, { headers });
       setMyDevices([...myDevices, r.data]);
-      setNewDeviceId(''); setNewDeviceName(''); setNewDeviceRoom('');
-      showMsg('✅ Dispositivo adicionado!');
+      setNewDeviceId(''); setNewDeviceName(''); setNewDeviceRoom(''); setNewProtocol('tuya');
+      showMsg('Dispositivo adicionado.');
     } catch (err) {
-      showMsg('❌ Erro ao adicionar: ' + (err.response?.data?.error || err.message), 'error');
+      showMsg('Erro: ' + (err.response?.data?.error || err.message), 'error');
     }
   };
 
@@ -417,62 +456,41 @@ function Settings({ session }) {
     try {
       await axios.delete(`${API}/my-devices/${id}`, { headers });
       setMyDevices(myDevices.filter(d => d.id !== id));
-      showMsg('✅ Dispositivo removido.');
-    } catch (err) {
-      showMsg('❌ Erro ao remover dispositivo.', 'error');
-    }
+    } catch { showMsg('Erro ao remover.', 'error'); }
   };
+
+  const protocolLabel = { tuya: 'Tuya', zigbee: 'Zigbee', matter: 'Matter', zwave: 'Z-Wave' };
 
   return (
     <div className="page">
       <div className="page-header"><div className="page-title">Configurações</div></div>
 
-      {/* Mensagem de feedback */}
-      {msg && (
-        <div className={msgType === 'success' ? 'login-success' : 'login-error'} style={{marginBottom:12}}>
-          {msg}
-        </div>
-      )}
+      {msg && <div className={msgType === 'success' ? 'login-success' : 'login-error'} style={{ marginBottom: 14 }}>{msg}</div>}
 
-      {/* Card de credenciais Tuya */}
-      <div className="card" style={{marginBottom:16}}>
-        <div style={{fontWeight:700, marginBottom:8, color:'#fff', fontSize:15}}>🔑 Credenciais Tuya</div>
-        <div style={{fontSize:12, color:'rgba(255,255,255,0.45)', marginBottom:14, lineHeight:1.5}}>
-          Encontre seu <strong style={{color:'rgba(255,255,255,0.7)'}}>Access ID</strong> e <strong style={{color:'rgba(255,255,255,0.7)'}}>Secret</strong> no painel do{' '}
-          <a href="https://iot.tuya.com" target="_blank" rel="noreferrer" style={{color:'#3B7EFF'}}>Tuya IoT Platform</a>.
-          {configured && <span style={{color:'#22c55e',display:'block',marginTop:4}}>✅ Credenciais já configuradas.</span>}
+      {/* Credenciais Tuya */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, marginBottom: 6, color: '#fff', fontSize: 14 }}>Credenciais Tuya IoT</div>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 16, lineHeight: 1.6 }}>
+          Encontre seu Access ID e Secret no{' '}
+          <a href="https://iot.tuya.com" target="_blank" rel="noreferrer" style={{ color: '#3B7EFF' }}>Tuya IoT Platform</a>.
+          {configured && <span style={{ color: '#22c55e', display: 'block', marginTop: 4 }}>Credenciais configuradas.</span>}
         </div>
         <form onSubmit={saveCredentials}>
-          <div className="login-field">
+          <div className="login-field" style={{ marginBottom: 12 }}>
             <label>Access ID</label>
-            <input
-              type="text"
-              value={accessId}
-              onChange={e => setAccessId(e.target.value)}
-              placeholder="ex: a1b2c3d4e5f6..."
-              required
-            />
+            <input type="text" value={accessId} onChange={e => setAccessId(e.target.value)} placeholder="Seu Access ID" required />
           </div>
-          <div className="login-field">
-            <label>Access Secret {configured && <span style={{color:'rgba(255,255,255,0.4)',fontSize:11}}>(deixe em branco para manter o atual)</span>}</label>
-            <input
-              type="password"
-              value={accessSecret}
-              onChange={e => setAccessSecret(e.target.value)}
-              placeholder={configured ? '(não alterado)' : '••••••••••••'}
-            />
+          <div className="login-field" style={{ marginBottom: 12 }}>
+            <label>Access Secret {configured && <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>(deixe em branco para manter)</span>}</label>
+            <PasswordField value={accessSecret} onChange={e => setAccessSecret(e.target.value)} placeholder={configured ? '(não alterado)' : 'Seu Access Secret'} />
           </div>
-          <div className="login-field">
+          <div className="login-field" style={{ marginBottom: 16 }}>
             <label>Região do servidor</label>
-            <select
-              value={baseUrl}
-              onChange={e => setBaseUrl(e.target.value)}
-              style={{width:'100%',padding:'10px 12px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'#fff',fontSize:14,outline:'none'}}
-            >
-              <option value="https://openapi.tuyaus.com">🌎 Américas (EUA)</option>
-              <option value="https://openapi.tuyaeu.com">🌍 Europa</option>
-              <option value="https://openapi.tuyacn.com">🌏 Ásia (China)</option>
-              <option value="https://openapi.tuyain.com">🇮🇳 Índia</option>
+            <select value={baseUrl} onChange={e => setBaseUrl(e.target.value)} className="styled-select">
+              <option value="https://openapi.tuyaus.com">Américas (EUA)</option>
+              <option value="https://openapi.tuyaeu.com">Europa</option>
+              <option value="https://openapi.tuyacn.com">Ásia (China)</option>
+              <option value="https://openapi.tuyain.com">Índia</option>
             </select>
           </div>
           <button type="submit" className="login-btn" disabled={loading}>
@@ -481,93 +499,90 @@ function Settings({ session }) {
         </form>
       </div>
 
-      {/* Card de dispositivos */}
+      {/* Meus Dispositivos */}
       <div className="card">
-        <div style={{fontWeight:700, marginBottom:12, color:'#fff', fontSize:15}}>📱 Meus Dispositivos</div>
+        <div style={{ fontWeight: 700, marginBottom: 14, color: '#fff', fontSize: 14 }}>Meus Dispositivos</div>
 
-        {/* Lista de dispositivos já cadastrados */}
         {myDevices.length === 0 && (
-          <div style={{color:'rgba(255,255,255,0.35)',fontSize:13,marginBottom:16,padding:'8px 0'}}>
-            Nenhum dispositivo cadastrado ainda.
+          <div style={{ color: 'rgba(255,255,255,0.28)', fontSize: 13, padding: '8px 0', marginBottom: 16 }}>
+            Nenhum dispositivo cadastrado.
           </div>
         )}
         {myDevices.map(d => (
-          <div key={d.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-            <div>
-              <div style={{color:'#fff',fontWeight:600,fontSize:13}}>{d.name}</div>
-              <div style={{color:'rgba(255,255,255,0.35)',fontSize:11,marginTop:2}}>
-                {d.room && <span>{d.room} • </span>}
-                <span style={{fontFamily:'monospace'}}>{d.tuya_id}</span>
+          <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <DeviceIcon category="switch" size={16} color="rgba(255,255,255,0.4)" />
+              <div>
+                <div style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{d.name}</div>
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 2 }}>
+                  {d.room && <span>{d.room} · </span>}
+                  <span style={{ fontFamily: 'monospace', fontSize: 10 }}>{d.tuya_id}</span>
+                  <span className="protocol-badge" style={{ marginLeft: 6 }}>Tuya</span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => removeDevice(d.id)}
-              style={{background:'rgba(239,68,68,0.12)',color:'#ef4444',border:'1px solid rgba(239,68,68,0.2)',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,flexShrink:0}}
-            >
+            <button onClick={() => removeDevice(d.id)}
+              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
               Remover
             </button>
           </div>
         ))}
 
-        {/* Formulário para adicionar dispositivo */}
-        <form onSubmit={addDevice} style={{marginTop:20}}>
-          <div style={{fontWeight:600,fontSize:13,color:'rgba(255,255,255,0.55)',marginBottom:10}}>Adicionar novo dispositivo</div>
-          <div className="login-field">
-            <label>ID do Dispositivo (Tuya ID)</label>
-            <input
-              type="text"
-              value={newDeviceId}
-              onChange={e => setNewDeviceId(e.target.value)}
-              placeholder="ex: 710151318cce4e127075"
-              required
-            />
+        {/* Adicionar dispositivo */}
+        <form onSubmit={addDevice} style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Adicionar dispositivo</div>
+
+          <div className="login-field" style={{ marginBottom: 10 }}>
+            <label>Protocolo</label>
+            <select value={newProtocol} onChange={e => setNewProtocol(e.target.value)} className="styled-select">
+              <option value="tuya">Tuya</option>
+              <option value="zigbee">Zigbee (em breve)</option>
+              <option value="matter">Matter (em breve)</option>
+              <option value="zwave">Z-Wave (em breve)</option>
+            </select>
           </div>
-          <div className="login-field">
-            <label>Nome do dispositivo</label>
-            <input
-              type="text"
-              value={newDeviceName}
-              onChange={e => setNewDeviceName(e.target.value)}
-              placeholder="ex: Interruptor Sala"
-              required
-            />
+          <div className="login-field" style={{ marginBottom: 10 }}>
+            <label>ID do dispositivo</label>
+            <input type="text" value={newDeviceId} onChange={e => setNewDeviceId(e.target.value)} placeholder="ex: 710151318cce4e127075" required />
           </div>
-          <div className="login-field">
+          <div className="login-field" style={{ marginBottom: 10 }}>
+            <label>Nome</label>
+            <input type="text" value={newDeviceName} onChange={e => setNewDeviceName(e.target.value)} placeholder="ex: Interruptor Sala" required />
+          </div>
+          <div className="login-field" style={{ marginBottom: 16 }}>
             <label>Cômodo (opcional)</label>
-            <input
-              type="text"
-              value={newDeviceRoom}
-              onChange={e => setNewDeviceRoom(e.target.value)}
-              placeholder="ex: Sala, Quarto, Cozinha..."
-            />
+            <input type="text" value={newDeviceRoom} onChange={e => setNewDeviceRoom(e.target.value)} placeholder="ex: Sala, Quarto, Cozinha..." />
           </div>
-          <button type="submit" className="login-btn">
-            + Adicionar Dispositivo
-          </button>
+          <button type="submit" className="login-btn">Adicionar Dispositivo</button>
         </form>
       </div>
     </div>
   );
 }
 
-// ── AUTOMAÇÕES, ALERTAS, CÂMERAS, STATUS ──────────────────
+// ── AUTOMAÇÕES ────────────────────────────────────────────────
 function Automations() {
   const [items, setItems] = useState([
-    {key:'sunset',   name:'Luzes ao anoitecer', desc:'Liga as luzes externas quando escurece.',            icon:'🌅', color:'#a78bfa', enabled:true },
-    {key:'sleep',    name:'Modo Dormir',         desc:'Desliga luzes e ativa sensores de segurança.',       icon:'🌙', color:'#818cf8', enabled:true },
-    {key:'smoke',    name:'Alerta de Fumaça',    desc:'Envia notificação se detectar fumaça.',              icon:'🔥', color:'#ef4444', enabled:true },
-    {key:'presence', name:'Simular Presença',    desc:'Liga e desliga luzes para simular presença em casa.',icon:'🏠', color:'#94a3b8', enabled:false},
+    { key: 'sunset',   name: 'Luzes ao anoitecer', desc: 'Liga as luzes externas quando escurece.',             color: '#a78bfa', enabled: true  },
+    { key: 'sleep',    name: 'Modo Descanso',       desc: 'Desliga luzes e ativa sensores de segurança.',        color: '#818cf8', enabled: true  },
+    { key: 'smoke',    name: 'Alerta de Fumaça',    desc: 'Envia notificação ao detectar fumaça.',               color: '#ef4444', enabled: true  },
+    { key: 'presence', name: 'Simular Presença',    desc: 'Liga e desliga luzes para simular presença em casa.', color: '#94a3b8', enabled: false },
   ]);
   const toggle = key => setItems(items.map(i => i.key===key ? {...i, enabled:!i.enabled} : i));
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">Automação</div><div className="icon-btn">＋</div></div>
+      <div className="page-header"><div className="page-title">Automação</div></div>
       <div className="tabs"><button className="tab active">Todas</button><button className="tab">Ativas</button><button className="tab">Inativas</button></div>
-      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.map(a => (
           <div className="auto-card" key={a.key}>
-            <div className="auto-icon-wrap" style={{background:`${a.color}22`}}><span>{a.icon}</span></div>
-            <div className="auto-info"><div className="auto-name">{a.name}</div><div className="auto-desc">{a.desc}</div></div>
+            <div className="auto-icon-wrap" style={{ background: `${a.color}18` }}>
+              <div style={{ width: 22, height: 22 }}>{Icons.automations}</div>
+            </div>
+            <div className="auto-info">
+              <div className="auto-name">{a.name}</div>
+              <div className="auto-desc">{a.desc}</div>
+            </div>
             <Toggle on={a.enabled} onClick={() => toggle(a.key)} />
           </div>
         ))}
@@ -576,25 +591,31 @@ function Automations() {
   );
 }
 
+// ── ALERTAS ───────────────────────────────────────────────────
 function Alerts() {
   const today = [
-    {id:1,type:'Fumaça detectada', where:'Cozinha', time:'10:32',color:'#ef4444',bg:'rgba(239,68,68,0.15)',icon:'🔥'},
-    {id:2,type:'Consumo elevado',  where:'Sala',    time:'08:15',color:'#eab308',bg:'rgba(234,179,8,0.15)',icon:'⚡'},
-    {id:3,type:'Porta aberta',     where:'Entrada', time:'07:45',color:'#3B7EFF',bg:'rgba(59,126,255,0.15)',icon:'🚪'},
+    { id:1, type:'Fumaça detectada',  where:'Cozinha', time:'10:32', color:'#ef4444', bg:'rgba(239,68,68,0.1)'   },
+    { id:2, type:'Consumo elevado',   where:'Sala',    time:'08:15', color:'#eab308', bg:'rgba(234,179,8,0.1)'   },
+    { id:3, type:'Porta aberta',      where:'Entrada', time:'07:45', color:'#3B7EFF', bg:'rgba(59,126,255,0.1)'  },
   ];
   const yesterday = [
-    {id:4,type:'Dispositivo desconectado',where:'Garagem',time:'22:15',color:'rgba(255,255,255,0.4)',bg:'rgba(255,255,255,0.07)',icon:'📡'},
+    { id:4, type:'Dispositivo offline', where:'Garagem', time:'22:15', color:'rgba(255,255,255,0.3)', bg:'rgba(255,255,255,0.05)' },
   ];
-  const Card = ({a}) => (
-    <div className="alert-card" style={{marginBottom:8}}>
-      <div className="alert-icon-wrap" style={{background:a.bg}}><span>{a.icon}</span></div>
-      <div style={{flex:1}}><div className="alert-title" style={{color:a.color}}>{a.type}</div><div className="alert-loc">{a.where}</div></div>
+  const Card = ({ a }) => (
+    <div className="alert-card" style={{ marginBottom: 8 }}>
+      <div className="alert-icon-wrap" style={{ background: a.bg }}>
+        <div style={{ width: 17, height: 17, color: a.color }}>{Icons.alerts}</div>
+      </div>
+      <div style={{ flex: 1 }}>
+        <div className="alert-title" style={{ color: a.color }}>{a.type}</div>
+        <div className="alert-loc">{a.where}</div>
+      </div>
       <span className="alert-time">{a.time}</span>
     </div>
   );
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">Alertas</div><div className="icon-btn">⚙️</div></div>
+      <div className="page-header"><div className="page-title">Alertas</div></div>
       <div className="tabs"><button className="tab active">Todos</button><button className="tab">Críticos</button><button className="tab">Informativos</button></div>
       <div className="day-label">Hoje</div>
       {today.map(a => <Card key={a.id} a={a} />)}
@@ -604,19 +625,23 @@ function Alerts() {
   );
 }
 
+// ── CÂMERAS ───────────────────────────────────────────────────
 function Cameras({ devices }) {
-  const cams = devices.filter(d => d.category_name?.toLowerCase().includes('camera') || d.category_name?.toLowerCase().includes('cam'));
-  const fallback = [{id:'c1',name:'Câmera Entrada',online:true},{id:'c2',name:'Câmera Garagem',online:false},{id:'c3',name:'Câmera Jardim',online:true},{id:'c4',name:'Câmera Sala',online:true}];
+  const cams = devices.filter(d => d.category_name?.toLowerCase().includes('camera'));
+  const fallback = [{ id:'c1', name:'Câmera Entrada', online:true },{ id:'c2', name:'Câmera Garagem', online:false },{ id:'c3', name:'Câmera Jardim', online:true },{ id:'c4', name:'Câmera Sala', online:true }];
   const list = cams.length > 0 ? cams : fallback;
   return (
     <div className="page">
-      <div className="page-title" style={{marginBottom:16}}>Câmeras</div>
+      <div className="page-title" style={{ marginBottom: 16 }}>Câmeras</div>
       <div className="grid-2">
         {list.map(c => (
-          <div className="card" style={{padding:12}} key={c.id}>
-            <div className="cam-preview"><span>📷</span>{c.online && <span className="live-badge">● LIVE</span>}</div>
+          <div className="card" style={{ padding: 12 }} key={c.id}>
+            <div className="cam-preview">
+              <DeviceIcon category="camera" size={32} color="rgba(255,255,255,0.2)" />
+              {c.online && <span className="live-badge">LIVE</span>}
+            </div>
             <div className="cam-name">{c.name}</div>
-            <div className="cam-status" style={{color:c.online?'#22c55e':'#ef4444'}}>{c.online?'Online':'Offline'}</div>
+            <div className="cam-status" style={{ color: c.online?'#22c55e':'#ef4444' }}>{c.online?'Online':'Offline'}</div>
           </div>
         ))}
       </div>
@@ -624,29 +649,32 @@ function Cameras({ devices }) {
   );
 }
 
+// ── STATUS ────────────────────────────────────────────────────
 function Status({ devices }) {
   const online = devices.filter(d => d.online).length;
   const total = devices.length;
   const devScore = total > 0 ? Math.round((online/total)*100) : 0;
   const stats = [
-    {icon:'🛡️',color:'rgba(34,197,94,0.15)',  name:'Segurança',    sub:'Todos os sistemas funcionando normalmente.',score:90},
-    {icon:'⚡',color:'rgba(234,179,8,0.15)',   name:'Energia',      sub:'Consumo dentro da média recomendada.',     score:85},
-    {icon:'📱',color:'rgba(59,126,255,0.15)',  name:'Dispositivos', sub:`${online} de ${total} dispositivos online.`,score:devScore},
-    {icon:'🌿',color:'rgba(20,220,160,0.12)',  name:'Ambiente',     sub:'Temperatura e qualidade do ar estão boas.',score:90},
+    { icon: Icons.alerts,  color: 'rgba(34,197,94,0.12)',   name: 'Segurança',    sub: 'Todos os sistemas normais.',                        score: 90        },
+    { icon: Icons.devices, color: 'rgba(234,179,8,0.12)',   name: 'Energia',      sub: 'Consumo dentro da média.',                          score: 85        },
+    { icon: Icons.status,  color: 'rgba(59,126,255,0.12)',  name: 'Dispositivos', sub: `${online} de ${total} dispositivos online.`,         score: devScore  },
+    { icon: Icons.status,  color: 'rgba(20,220,160,0.10)',  name: 'Ambiente',     sub: 'Temperatura e qualidade do ar adequadas.',           score: 90        },
   ];
   const geral = Math.round(stats.reduce((a,s) => a+s.score,0)/stats.length);
   return (
     <div className="page">
-      <div className="page-title" style={{marginBottom:16}}>Status da Casa</div>
-      <div className="card score-card" style={{marginBottom:14}}>
+      <div className="page-title" style={{ marginBottom: 16 }}>Status da Instalação</div>
+      <div className="card score-card" style={{ marginBottom: 14 }}>
         <div className="score-num">{geral}<span className="score-den">/100</span></div>
         <div className="score-label">Excelente</div>
-        <div className="score-desc">Sua casa está em excelente estado!</div>
+        <div className="score-desc">Sua instalação está em ótimo estado.</div>
       </div>
       <div className="card">
         {stats.map(s => (
           <div className="stat-row" key={s.name}>
-            <div className="stat-icon" style={{background:s.color}}>{s.icon}</div>
+            <div className="stat-icon" style={{ background: s.color }}>
+              <div style={{ width: 17, height: 17 }}>{s.icon}</div>
+            </div>
             <div className="stat-info"><div className="stat-name">{s.name}</div><div className="stat-sub">{s.sub}</div></div>
             <span className="stat-score">{s.score}/100</span>
           </div>
@@ -656,7 +684,7 @@ function Status({ devices }) {
   );
 }
 
-// ── APP PRINCIPAL ─────────────────────────────────────────
+// ── APP PRINCIPAL ─────────────────────────────────────────────
 export default function App() {
   const [page, setPage] = useState('dashboard');
   const [devices, setDevices] = useState([]);
@@ -667,32 +695,18 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
+      setSession(session); setAuthLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
 
-  // Busca os dispositivos do usuário (usando o token para autenticar)
   const fetchDevices = (token) => {
-    axios.get(`${API}/devices`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => {
-        setDevices(r.data?.result?.list || []);
-        setTuyaConfigured(true);
-      })
+    axios.get(`${API}/devices`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => { setDevices(r.data?.result?.list || []); setTuyaConfigured(true); })
       .catch(err => {
-        if (err.response?.status === 400) {
-          // Tuya não configurado ainda
-          setTuyaConfigured(false);
-          setDevices([]);
-        } else {
-          console.error(err);
-        }
+        if (err.response?.status === 400) { setTuyaConfigured(false); setDevices([]); }
+        else console.error(err);
       })
       .finally(() => setLoading(false));
   };
@@ -701,32 +715,24 @@ export default function App() {
     if (!session) return;
     const token = session.access_token;
     fetchDevices(token);
-    // Atualiza os dispositivos a cada 30 segundos automaticamente
     const interval = setInterval(() => fetchDevices(token), 30000);
     return () => clearInterval(interval);
   }, [session]);
 
-  // Liga ou desliga um dispositivo
   const handleToggle = async (id, currentlyOn) => {
     try {
-      await axios.post(
-        `${API}/devices/${id}/command`,
+      await axios.post(`${API}/devices/${id}/command`,
         { commands: [{ code: 'switch_1', value: !currentlyOn }] },
         { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
-      // Aguarda 1,5s e atualiza a lista para refletir o novo estado
       setTimeout(() => fetchDevices(session.access_token), 1500);
-    } catch(e) {
-      console.error(e);
-    }
+    } catch(e) { console.error(e); }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+  const handleLogout = () => supabase.auth.signOut();
 
   if (authLoading) return (
-    <div style={{background:'#0B0F19',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.3)'}}>
+    <div style={{ background: '#0B0F19', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
       Carregando...
     </div>
   );
