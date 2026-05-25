@@ -3,7 +3,7 @@ import axios from 'axios';
 import { supabase } from './supabase';
 import './App.css';
 
-const API = 'http://localhost:3001';
+const API = 'https://dudufritzs-projects-production.up.railway.app';
 
 const ICON_MAP = {
   'detector de inundação': '💧', 'flooding': '💧', 'vazamento': '💧',
@@ -100,18 +100,18 @@ function Login() {
     setLoading(true); setError(''); setSuccess('');
     if (cpf.replace(/\D/g,'').length !== 11) { setError('CPF inválido.'); setLoading(false); return; }
     if (phone.replace(/\D/g,'').length < 10) { setError('Telefone inválido.'); setLoading(false); return; }
-    const { error }= await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    data: {
-      full_name: fullName,
-      phone: phone.replace(/\D/g,''),
-      cpf: cpf.replace(/\D/g,''),
-    }
-  }
-});
-if (error) { setError(error.message); setLoading(false); return; }
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          phone: phone.replace(/\D/g,''),
+          cpf: cpf.replace(/\D/g,''),
+        }
+      }
+    });
+    if (error) { setError(error.message); setLoading(false); return; }
     setSuccess('Conta criada! Verifique seu email para confirmar o cadastro.');
     setLoading(false);
   };
@@ -139,19 +139,16 @@ if (error) { setError(error.message); setLoading(false); return; }
         </div>
 
         <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleForgot} className="login-form">
-
           {mode === 'register' && (
             <div className="login-field">
               <label>Nome completo</label>
               <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Seu nome completo" required />
             </div>
           )}
-
           <div className="login-field">
             <label>Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
           </div>
-
           {mode === 'register' && (
             <>
               <div className="login-field">
@@ -164,17 +161,14 @@ if (error) { setError(error.message); setLoading(false); return; }
               </div>
             </>
           )}
-
           {mode !== 'forgot' && (
             <div className="login-field">
               <label>Senha</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
             </div>
           )}
-
           {error   && <div className="login-error">{error}</div>}
           {success && <div className="login-success">{success}</div>}
-
           <button type="submit" className="login-btn" disabled={loading}>
             {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Enviar email'}
           </button>
@@ -202,6 +196,7 @@ function Sidebar({ page, setPage, user, onLogout }) {
     { id: 'alerts',      label: 'Alertas',      icon: '🔔' },
     { id: 'cameras',     label: 'Câmeras',      icon: '📷' },
     { id: 'status',      label: 'Status',       icon: '📊' },
+    { id: 'settings',    label: 'Configurações',icon: '🔑' },
   ];
   return (
     <div className="sidebar">
@@ -224,8 +219,7 @@ function Sidebar({ page, setPage, user, onLogout }) {
   );
 }
 
-
-
+// ── DASHBOARD ─────────────────────────────────────────────
 function Dashboard({ devices, setPage }) {
   const [scenes, setScenes] = useState([
     { key:'casa',   name:'Casa',   icon:'🏠', active:true  },
@@ -279,18 +273,44 @@ function Dashboard({ devices, setPage }) {
   );
 }
 
-function Devices({ devices, loading, onToggle }) {
+// ── DEVICES ───────────────────────────────────────────────
+function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
   const [filter, setFilter] = useState('Todos');
   const tabs = ['Todos','Sala','Quarto','Cozinha','Externa'];
   const filtered = filter === 'Todos' ? devices : devices.filter(d => d.name?.toLowerCase().includes(filter.toLowerCase()) || d.room?.toLowerCase().includes(filter.toLowerCase()));
+
   if (loading) return <div className="loading">⏳ Carregando dispositivos...</div>;
+
+  if (!tuyaConfigured) {
+    return (
+      <div className="page">
+        <div className="page-header"><div className="page-title">Dispositivos</div></div>
+        <div className="card" style={{textAlign:'center',padding:32}}>
+          <div style={{fontSize:40,marginBottom:12}}>🔑</div>
+          <div style={{color:'#fff',fontWeight:700,fontSize:16,marginBottom:8}}>Credenciais Tuya não configuradas</div>
+          <div style={{color:'rgba(255,255,255,0.5)',fontSize:13,marginBottom:20}}>
+            Para ver e controlar seus dispositivos, você precisa cadastrar suas credenciais Tuya primeiro.
+          </div>
+          <button className="login-btn" onClick={() => setPage('settings')} style={{maxWidth:200,margin:'0 auto'}}>
+            Ir para Configurações
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <div className="page-header">
         <div><div className="page-title">Dispositivos</div><div className="page-subtitle">{devices.filter(d=>d.online).length} de {devices.length} online</div></div>
-        <div className="header-actions"><div className="icon-btn">🔍</div><div className="icon-btn">＋</div></div>
+        <div className="header-actions"><div className="icon-btn">🔍</div></div>
       </div>
       <div className="tabs">{tabs.map(t => <button key={t} className={`tab ${filter===t?'active':''}`} onClick={() => setFilter(t)}>{t}</button>)}</div>
+      {filtered.length === 0 && (
+        <div className="card" style={{textAlign:'center',padding:24,color:'rgba(255,255,255,0.4)'}}>
+          Nenhum dispositivo encontrado. Adicione dispositivos em Configurações.
+        </div>
+      )}
       <div className="grid-3">
         {filtered.map(d => {
           const color = getColor(d.category_name);
@@ -316,6 +336,221 @@ function Devices({ devices, loading, onToggle }) {
   );
 }
 
+// ── CONFIGURAÇÕES ─────────────────────────────────────────
+function Settings({ session }) {
+  const [accessId, setAccessId] = useState('');
+  const [accessSecret, setAccessSecret] = useState('');
+  const [baseUrl, setBaseUrl] = useState('https://openapi.tuyaus.com');
+  const [configured, setConfigured] = useState(false);
+  const [myDevices, setMyDevices] = useState([]);
+  const [newDeviceId, setNewDeviceId] = useState('');
+  const [newDeviceName, setNewDeviceName] = useState('');
+  const [newDeviceRoom, setNewDeviceRoom] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [msgType, setMsgType] = useState('success');
+
+  const headers = { Authorization: `Bearer ${session.access_token}` };
+
+  useEffect(() => {
+    // Verifica se já tem credenciais salvas
+    axios.get(`${API}/tuya-credentials`, { headers })
+      .then(r => {
+        setConfigured(r.data.configured);
+        if (r.data.configured) {
+          setAccessId(r.data.tuya_access_id || '');
+          setBaseUrl(r.data.tuya_base_url || 'https://openapi.tuyaus.com');
+        }
+      })
+      .catch(console.error);
+
+    // Carrega os dispositivos cadastrados
+    axios.get(`${API}/my-devices`, { headers })
+      .then(r => setMyDevices(r.data))
+      .catch(console.error);
+  }, []); // eslint-disable-line
+
+  const showMsg = (text, type = 'success') => {
+    setMsg(text); setMsgType(type);
+    setTimeout(() => setMsg(''), 4000);
+  };
+
+  const saveCredentials = async e => {
+    e.preventDefault();
+    if (!accessSecret && !configured) {
+      showMsg('Por favor, informe o Access Secret.', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API}/tuya-credentials`, {
+        tuya_access_id: accessId,
+        tuya_secret: accessSecret,
+        tuya_base_url: baseUrl
+      }, { headers });
+      setConfigured(true);
+      setAccessSecret('');
+      showMsg('✅ Credenciais salvas com sucesso!');
+    } catch (err) {
+      showMsg('❌ Erro ao salvar: ' + (err.response?.data?.error || err.message), 'error');
+    }
+    setLoading(false);
+  };
+
+  const addDevice = async e => {
+    e.preventDefault();
+    try {
+      const r = await axios.post(`${API}/my-devices`, {
+        tuya_id: newDeviceId.trim(),
+        name: newDeviceName.trim(),
+        room: newDeviceRoom.trim()
+      }, { headers });
+      setMyDevices([...myDevices, r.data]);
+      setNewDeviceId(''); setNewDeviceName(''); setNewDeviceRoom('');
+      showMsg('✅ Dispositivo adicionado!');
+    } catch (err) {
+      showMsg('❌ Erro ao adicionar: ' + (err.response?.data?.error || err.message), 'error');
+    }
+  };
+
+  const removeDevice = async id => {
+    try {
+      await axios.delete(`${API}/my-devices/${id}`, { headers });
+      setMyDevices(myDevices.filter(d => d.id !== id));
+      showMsg('✅ Dispositivo removido.');
+    } catch (err) {
+      showMsg('❌ Erro ao remover dispositivo.', 'error');
+    }
+  };
+
+  return (
+    <div className="page">
+      <div className="page-header"><div className="page-title">Configurações</div></div>
+
+      {/* Mensagem de feedback */}
+      {msg && (
+        <div className={msgType === 'success' ? 'login-success' : 'login-error'} style={{marginBottom:12}}>
+          {msg}
+        </div>
+      )}
+
+      {/* Card de credenciais Tuya */}
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{fontWeight:700, marginBottom:8, color:'#fff', fontSize:15}}>🔑 Credenciais Tuya</div>
+        <div style={{fontSize:12, color:'rgba(255,255,255,0.45)', marginBottom:14, lineHeight:1.5}}>
+          Encontre seu <strong style={{color:'rgba(255,255,255,0.7)'}}>Access ID</strong> e <strong style={{color:'rgba(255,255,255,0.7)'}}>Secret</strong> no painel do{' '}
+          <a href="https://iot.tuya.com" target="_blank" rel="noreferrer" style={{color:'#3B7EFF'}}>Tuya IoT Platform</a>.
+          {configured && <span style={{color:'#22c55e',display:'block',marginTop:4}}>✅ Credenciais já configuradas.</span>}
+        </div>
+        <form onSubmit={saveCredentials}>
+          <div className="login-field">
+            <label>Access ID</label>
+            <input
+              type="text"
+              value={accessId}
+              onChange={e => setAccessId(e.target.value)}
+              placeholder="ex: a1b2c3d4e5f6..."
+              required
+            />
+          </div>
+          <div className="login-field">
+            <label>Access Secret {configured && <span style={{color:'rgba(255,255,255,0.4)',fontSize:11}}>(deixe em branco para manter o atual)</span>}</label>
+            <input
+              type="password"
+              value={accessSecret}
+              onChange={e => setAccessSecret(e.target.value)}
+              placeholder={configured ? '(não alterado)' : '••••••••••••'}
+            />
+          </div>
+          <div className="login-field">
+            <label>Região do servidor</label>
+            <select
+              value={baseUrl}
+              onChange={e => setBaseUrl(e.target.value)}
+              style={{width:'100%',padding:'10px 12px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'#fff',fontSize:14,outline:'none'}}
+            >
+              <option value="https://openapi.tuyaus.com">🌎 Américas (EUA)</option>
+              <option value="https://openapi.tuyaeu.com">🌍 Europa</option>
+              <option value="https://openapi.tuyacn.com">🌏 Ásia (China)</option>
+              <option value="https://openapi.tuyain.com">🇮🇳 Índia</option>
+            </select>
+          </div>
+          <button type="submit" className="login-btn" disabled={loading}>
+            {loading ? 'Salvando...' : configured ? 'Atualizar Credenciais' : 'Salvar Credenciais'}
+          </button>
+        </form>
+      </div>
+
+      {/* Card de dispositivos */}
+      <div className="card">
+        <div style={{fontWeight:700, marginBottom:12, color:'#fff', fontSize:15}}>📱 Meus Dispositivos</div>
+
+        {/* Lista de dispositivos já cadastrados */}
+        {myDevices.length === 0 && (
+          <div style={{color:'rgba(255,255,255,0.35)',fontSize:13,marginBottom:16,padding:'8px 0'}}>
+            Nenhum dispositivo cadastrado ainda.
+          </div>
+        )}
+        {myDevices.map(d => (
+          <div key={d.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+            <div>
+              <div style={{color:'#fff',fontWeight:600,fontSize:13}}>{d.name}</div>
+              <div style={{color:'rgba(255,255,255,0.35)',fontSize:11,marginTop:2}}>
+                {d.room && <span>{d.room} • </span>}
+                <span style={{fontFamily:'monospace'}}>{d.tuya_id}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => removeDevice(d.id)}
+              style={{background:'rgba(239,68,68,0.12)',color:'#ef4444',border:'1px solid rgba(239,68,68,0.2)',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,flexShrink:0}}
+            >
+              Remover
+            </button>
+          </div>
+        ))}
+
+        {/* Formulário para adicionar dispositivo */}
+        <form onSubmit={addDevice} style={{marginTop:20}}>
+          <div style={{fontWeight:600,fontSize:13,color:'rgba(255,255,255,0.55)',marginBottom:10}}>Adicionar novo dispositivo</div>
+          <div className="login-field">
+            <label>ID do Dispositivo (Tuya ID)</label>
+            <input
+              type="text"
+              value={newDeviceId}
+              onChange={e => setNewDeviceId(e.target.value)}
+              placeholder="ex: 710151318cce4e127075"
+              required
+            />
+          </div>
+          <div className="login-field">
+            <label>Nome do dispositivo</label>
+            <input
+              type="text"
+              value={newDeviceName}
+              onChange={e => setNewDeviceName(e.target.value)}
+              placeholder="ex: Interruptor Sala"
+              required
+            />
+          </div>
+          <div className="login-field">
+            <label>Cômodo (opcional)</label>
+            <input
+              type="text"
+              value={newDeviceRoom}
+              onChange={e => setNewDeviceRoom(e.target.value)}
+              placeholder="ex: Sala, Quarto, Cozinha..."
+            />
+          </div>
+          <button type="submit" className="login-btn">
+            + Adicionar Dispositivo
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── AUTOMAÇÕES, ALERTAS, CÂMERAS, STATUS ──────────────────
 function Automations() {
   const [items, setItems] = useState([
     {key:'sunset',   name:'Luzes ao anoitecer', desc:'Liga as luzes externas quando escurece.',            icon:'🌅', color:'#a78bfa', enabled:true },
@@ -421,10 +656,12 @@ function Status({ devices }) {
   );
 }
 
+// ── APP PRINCIPAL ─────────────────────────────────────────
 export default function App() {
   const [page, setPage] = useState('dashboard');
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tuyaConfigured, setTuyaConfigured] = useState(true);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -439,34 +676,60 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchDevices = () => {
-    axios.get(`${API}/devices`)
-      .then(r => setDevices(r.data?.result?.list || []))
-      .catch(console.error)
+  // Busca os dispositivos do usuário (usando o token para autenticar)
+  const fetchDevices = (token) => {
+    axios.get(`${API}/devices`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => {
+        setDevices(r.data?.result?.list || []);
+        setTuyaConfigured(true);
+      })
+      .catch(err => {
+        if (err.response?.status === 400) {
+          // Tuya não configurado ainda
+          setTuyaConfigured(false);
+          setDevices([]);
+        } else {
+          console.error(err);
+        }
+      })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     if (!session) return;
-    fetchDevices();
-    const interval = setInterval(fetchDevices, 30000);
+    const token = session.access_token;
+    fetchDevices(token);
+    // Atualiza os dispositivos a cada 30 segundos automaticamente
+    const interval = setInterval(() => fetchDevices(token), 30000);
     return () => clearInterval(interval);
   }, [session]);
 
+  // Liga ou desliga um dispositivo
   const handleToggle = async (id, currentlyOn) => {
     try {
-      await axios.post(`${API}/devices/${id}/command`, {
-        commands: [{ code: 'switch_1', value: !currentlyOn }]
-      });
-      setTimeout(fetchDevices, 1500);
-    } catch(e) { console.error(e); }
+      await axios.post(
+        `${API}/devices/${id}/command`,
+        { commands: [{ code: 'switch_1', value: !currentlyOn }] },
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      // Aguarda 1,5s e atualiza a lista para refletir o novo estado
+      setTimeout(() => fetchDevices(session.access_token), 1500);
+    } catch(e) {
+      console.error(e);
+    }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
-  if (authLoading) return <div style={{background:'#0B0F19',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.3)'}}>Carregando...</div>;
+  if (authLoading) return (
+    <div style={{background:'#0B0F19',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.3)'}}>
+      Carregando...
+    </div>
+  );
   if (!session) return <Login />;
 
   return (
@@ -474,11 +737,12 @@ export default function App() {
       <Sidebar page={page} setPage={setPage} user={session.user} onLogout={handleLogout} />
       <div className="main">
         {page==='dashboard'   && <Dashboard    devices={devices} setPage={setPage} />}
-        {page==='devices'     && <Devices      devices={devices} loading={loading} onToggle={handleToggle} />}
+        {page==='devices'     && <Devices      devices={devices} loading={loading} onToggle={handleToggle} tuyaConfigured={tuyaConfigured} setPage={setPage} />}
         {page==='automations' && <Automations />}
         {page==='alerts'      && <Alerts />}
         {page==='cameras'     && <Cameras devices={devices} />}
         {page==='status'      && <Status   devices={devices} />}
+        {page==='settings'    && <Settings session={session} />}
       </div>
     </div>
   );
