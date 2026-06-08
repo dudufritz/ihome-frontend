@@ -556,6 +556,56 @@ function Settings({ session }) {
           <button type="submit" className="login-btn">Adicionar Dispositivo</button>
         </form>
       </div>
+
+      {/* Desinstalar app */}
+      <UninstallCard />
+
+      {/* Rodapé com versão */}
+      <div style={{ textAlign: 'center', marginTop: 24, paddingBottom: 8 }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.05em' }}>
+          iHome Residencial · v0.8.0
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UninstallCard() {
+  const [show, setShow] = useState(false);
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+  const steps = isIOS
+    ? ['Pressione o botão de compartilhar (quadrado com seta) na barra do Safari.', 'Role para baixo e toque em "Remover da Tela de Início".', 'Confirme tocando em "Remover".']
+    : isAndroid
+    ? ['Pressione e segure o ícone do iHome na tela inicial.', 'Arraste até "Desinstalar" ou toque em "Remover app".', 'Confirme a remoção.']
+    : ['Clique nos 3 pontinhos no canto superior direito do Chrome/Edge.', 'Selecione "iHome Automação Residencial" → "Desinstalar".', 'Confirme clicando em "Remover".'];
+
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 3 }}>Desinstalar app</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+            {isStandalone ? 'App instalado no seu dispositivo.' : 'Remover o atalho instalado.'}
+          </div>
+        </div>
+        <button onClick={() => setShow(!show)} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+          {show ? 'Fechar' : 'Como desinstalar'}
+        </button>
+      </div>
+      {show && (
+        <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+          {steps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{step}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
