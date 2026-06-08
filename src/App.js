@@ -10,7 +10,7 @@ const API = 'https://dudufritzs-projects-production.up.railway.app';
 function LoginLogo() {
   return (
     <div style={{ textAlign: 'center', marginBottom: 32 }}>
-      <img src="/logo.png" alt="iHome" style={{ width: 180, display: 'block', margin: '0 auto' }} />
+      <img src="/logo.png" alt="iHome" style={{ width: 240, display: 'block', margin: '0 auto' }} />
     </div>
   );
 }
