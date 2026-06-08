@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { supabase } from './supabase';
 import './App.css';
@@ -30,6 +30,7 @@ const Icons = {
   devices:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   automations: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
   alerts:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+  assistant:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,
   cameras:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
   status:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
   settings:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
@@ -193,6 +194,7 @@ function Sidebar({ page, setPage, user, onLogout }) {
   const items = [
     { id: 'dashboard',   label: 'Visão Geral',   icon: Icons.dashboard   },
     { id: 'devices',     label: 'Dispositivos',  icon: Icons.devices     },
+    { id: 'assistant',   label: 'Assistente',    icon: Icons.assistant   },
     { id: 'automations', label: 'Automação',     icon: Icons.automations },
     { id: 'alerts',      label: 'Alertas',       icon: Icons.alerts      },
     { id: 'cameras',     label: 'Câmeras',       icon: Icons.cameras     },
@@ -222,11 +224,11 @@ function Sidebar({ page, setPage, user, onLogout }) {
 // ── NAVEGAÇÃO INFERIOR (mobile) ──────────────────────────────
 function BottomNav({ page, setPage }) {
   const items = [
-    { id: 'dashboard',   label: 'Início',    icon: Icons.dashboard   },
+    { id: 'dashboard',   label: 'Início',     icon: Icons.dashboard  },
     { id: 'devices',     label: 'Dispositivos', icon: Icons.devices  },
-    { id: 'automations', label: 'Automação', icon: Icons.automations },
-    { id: 'alerts',      label: 'Alertas',   icon: Icons.alerts      },
-    { id: 'settings',    label: 'Config.',   icon: Icons.settings    },
+    { id: 'assistant',   label: 'Assistente', icon: Icons.assistant  },
+    { id: 'automations', label: 'Automação',  icon: Icons.automations},
+    { id: 'settings',    label: 'Config.',    icon: Icons.settings   },
   ];
   return (
     <nav className="bottom-nav">
@@ -467,7 +469,7 @@ function Settings({ session }) {
         <div style={{ fontWeight: 700, marginBottom: 6, color: '#fff', fontSize: 14 }}>Credenciais Tuya IoT</div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 16, lineHeight: 1.6 }}>
           Encontre seu Access ID e Secret no{' '}
-          <a href="https://iot.tuya.com" target="_blank" rel="noreferrer" style={{ color: '#3B7EFF' }}>Tuya IoT Platform</a>.
+          <a href="https://platform.tuya.com" target="_blank" rel="noreferrer" style={{ color: '#3B7EFF' }}>Tuya IoT Platform</a>.
           {configured && <span style={{ color: '#22c55e', display: 'block', marginTop: 4 }}>Credenciais configuradas.</span>}
         </div>
         <form onSubmit={saveCredentials}>
@@ -679,6 +681,118 @@ function Status({ devices }) {
   );
 }
 
+// ── ASSISTENTE IA ─────────────────────────────────────────────
+function Assistant({ session }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: 'Olá! Sou o assistente iHome. Diga o que deseja fazer, como "liga a luz da sala" ou "cria rotina para ligar a tomada às 14h e desligar às 20h".' }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const bottomRef = useRef(null);
+  const headers = { Authorization: `Bearer ${session.access_token}` };
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  useEffect(() => {
+    axios.get(`${API}/schedules`, { headers }).then(r => setSchedules(r.data)).catch(() => {});
+  }, []); // eslint-disable-line
+
+  const sendCommand = async (text) => {
+    if (!text.trim() || loading) return;
+    setMessages(prev => [...prev, { role: 'user', text }]);
+    setInput('');
+    setLoading(true);
+    try {
+      const r = await axios.post(`${API}/ai-command`, { command: text }, { headers });
+      setMessages(prev => [...prev, { role: 'assistant', text: r.data.message || r.data.error }]);
+      axios.get(`${API}/schedules`, { headers }).then(r => setSchedules(r.data)).catch(() => {});
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Não consegui processar o comando. Tente novamente.' }]);
+    }
+    setLoading(false);
+  };
+
+  const startVoice = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Reconhecimento de voz não disponível neste navegador. Use Chrome ou Edge.'); return; }
+    const r = new SR();
+    r.lang = 'pt-BR';
+    r.onstart = () => setListening(true);
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    r.onresult = e => {
+      const text = e.results[0][0].transcript;
+      setInput(text);
+      sendCommand(text);
+    };
+    r.start();
+  };
+
+  const removeSchedule = async id => {
+    try {
+      await axios.delete(`${API}/schedules/${id}`, { headers });
+      setSchedules(schedules.filter(s => s.id !== id));
+    } catch {}
+  };
+
+  return (
+    <div className="page assistant-page">
+      <div className="page-header">
+        <div>
+          <div className="page-title">Assistente iHome</div>
+          <div className="page-subtitle">Controle por voz ou texto</div>
+        </div>
+      </div>
+
+      {schedules.length > 0 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Rotinas ativas</div>
+          {schedules.map(s => (
+            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div>
+                <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{s.device_name}</div>
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 2 }}>
+                  {s.on_time && `Liga às ${s.on_time}`}{s.on_time && s.off_time && ' · '}{s.off_time && `Desliga às ${s.off_time}`}
+                </div>
+              </div>
+              <button onClick={() => removeSchedule(s.id)} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 11 }}>
+                Remover
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="chat-messages">
+        {messages.map((m, i) => (
+          <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
+        ))}
+        {loading && <div className="chat-bubble assistant"><span className="chat-dots"><span/><span/><span/></span></div>}
+        <div ref={bottomRef} />
+      </div>
+
+      <div className="chat-input-row">
+        <input
+          className="chat-input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && sendCommand(input)}
+          placeholder="Digite um comando..."
+          disabled={loading}
+        />
+        <button className={`chat-mic${listening ? ' listening' : ''}`} onClick={startVoice} disabled={loading} title="Falar">
+          {Icons.assistant}
+        </button>
+        <button className="chat-send" onClick={() => sendCommand(input)} disabled={loading || !input.trim()} title="Enviar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── APP PRINCIPAL ─────────────────────────────────────────────
 export default function App() {
   const [page, setPage] = useState('dashboard');
@@ -739,6 +853,7 @@ export default function App() {
       <div className="main">
         {page==='dashboard'   && <Dashboard    devices={devices} setPage={setPage} />}
         {page==='devices'     && <Devices      devices={devices} loading={loading} onToggle={handleToggle} tuyaConfigured={tuyaConfigured} setPage={setPage} />}
+        {page==='assistant'   && <Assistant    session={session} />}
         {page==='automations' && <Automations />}
         {page==='alerts'      && <Alerts />}
         {page==='cameras'     && <Cameras devices={devices} />}
