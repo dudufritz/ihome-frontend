@@ -190,7 +190,7 @@ function Login() {
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────
-function Sidebar({ page, setPage, user, onLogout }) {
+function Sidebar({ page, setPage, user, onLogout, unreadAlerts = 0 }) {
   const items = [
     { id: 'dashboard',   label: 'Visão Geral',   icon: Icons.dashboard   },
     { id: 'devices',     label: 'Dispositivos',  icon: Icons.devices     },
@@ -206,6 +206,9 @@ function Sidebar({ page, setPage, user, onLogout }) {
       {items.map(i => (
         <button key={i.id} className={`nav-item ${page===i.id?'active':''}`} onClick={() => setPage(i.id)}>
           <span className="nav-icon">{i.icon}</span>{i.label}
+          {i.id === 'alerts' && unreadAlerts > 0 && (
+            <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '2px 6px', minWidth: 18, textAlign: 'center' }}>{unreadAlerts}</span>
+          )}
         </button>
       ))}
       <div style={{ marginTop: 'auto' }}>
@@ -221,7 +224,7 @@ function Sidebar({ page, setPage, user, onLogout }) {
 }
 
 // ── NAVEGAÇÃO INFERIOR (mobile) ──────────────────────────────
-function BottomNav({ page, setPage }) {
+function BottomNav({ page, setPage, unreadAlerts = 0 }) {
   const items = [
     { id: 'dashboard',   label: 'Início',       icon: Icons.dashboard   },
     { id: 'devices',     label: 'Dispositivos', icon: Icons.devices     },
@@ -233,7 +236,12 @@ function BottomNav({ page, setPage }) {
     <nav className="bottom-nav">
       {items.map(i => (
         <button key={i.id} className={`bottom-nav-item ${page===i.id?'active':''}`} onClick={() => setPage(i.id)}>
-          {i.icon}
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            {i.icon}
+            {i.id === 'alerts' && unreadAlerts > 0 && (
+              <span style={{ position: 'absolute', top: -4, right: -6, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 700, borderRadius: 8, padding: '1px 4px', minWidth: 14, textAlign: 'center', lineHeight: '14px' }}>{unreadAlerts}</span>
+            )}
+          </span>
           <span>{i.label}</span>
         </button>
       ))}
@@ -736,35 +744,85 @@ function Automations({ session, devices }) {
 }
 
 // ── ALERTAS ───────────────────────────────────────────────────
-function Alerts() {
-  const today = [
-    { id:1, type:'Fumaça detectada',  where:'Cozinha', time:'10:32', color:'#ef4444', bg:'rgba(239,68,68,0.1)'   },
-    { id:2, type:'Consumo elevado',   where:'Sala',    time:'08:15', color:'#eab308', bg:'rgba(234,179,8,0.1)'   },
-    { id:3, type:'Porta aberta',      where:'Entrada', time:'07:45', color:'#3B7EFF', bg:'rgba(59,126,255,0.1)'  },
-  ];
-  const yesterday = [
-    { id:4, type:'Dispositivo offline', where:'Garagem', time:'22:15', color:'rgba(255,255,255,0.3)', bg:'rgba(255,255,255,0.05)' },
-  ];
-  const Card = ({ a }) => (
-    <div className="alert-card" style={{ marginBottom: 8 }}>
-      <div className="alert-icon-wrap" style={{ background: a.bg }}>
-        <div style={{ width: 17, height: 17, color: a.color }}>{Icons.alerts}</div>
-      </div>
-      <div style={{ flex: 1 }}>
-        <div className="alert-title" style={{ color: a.color }}>{a.type}</div>
-        <div className="alert-loc">{a.where}</div>
-      </div>
-      <span className="alert-time">{a.time}</span>
-    </div>
-  );
+function Alerts({ session }) {
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const headers = { Authorization: `Bearer ${session.access_token}` };
+
+  const load = () => {
+    setLoading(true);
+    axios.get(`${API}/alerts`, { headers })
+      .then(r => setAlerts(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    axios.put(`${API}/alerts/read-all`, {}, { headers }).catch(() => {});
+  }, []); // eslint-disable-line
+
+  const clearAll = async () => {
+    await axios.delete(`${API}/alerts`, { headers }).catch(() => {});
+    setAlerts([]);
+  };
+
+  const typeConfig = {
+    offline: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',  label: 'Dispositivo offline' },
+    online:  { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',  label: 'Dispositivo online'  },
+  };
+
+  const formatTime = ts => {
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 60000) return 'agora';
+    if (diff < 3600000) return `${Math.floor(diff/60000)}min`;
+    if (diff < 86400000) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">Alertas</div></div>
-      <div className="tabs"><button className="tab active">Todos</button><button className="tab">Críticos</button><button className="tab">Informativos</button></div>
-      <div className="day-label">Hoje</div>
-      {today.map(a => <Card key={a.id} a={a} />)}
-      <div className="day-label">Ontem</div>
-      {yesterday.map(a => <Card key={a.id} a={a} />)}
+      <div className="page-header">
+        <div>
+          <div className="page-title">Alertas</div>
+          <div className="page-subtitle">{alerts.length} registro{alerts.length !== 1 ? 's' : ''}</div>
+        </div>
+        {alerts.length > 0 && (
+          <button onClick={clearAll} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 14px', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+            Limpar tudo
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="loading">Carregando alertas...</div>
+      ) : alerts.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.2 }}>{Icons.alerts}</div>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Nenhum alerta</div>
+          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>Os dispositivos estão sendo monitorados. Alertas de conexão aparecerão aqui.</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {alerts.map(a => {
+            const cfg = typeConfig[a.type] || { color: '#3B7EFF', bg: 'rgba(59,126,255,0.1)', label: a.type };
+            return (
+              <div className="alert-card" key={a.id} style={{ opacity: a.read ? 0.6 : 1 }}>
+                <div className="alert-icon-wrap" style={{ background: cfg.bg }}>
+                  <div style={{ width: 17, height: 17, color: cfg.color }}>{Icons.alerts}</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="alert-title" style={{ color: cfg.color }}>{cfg.label}</div>
+                  <div className="alert-loc">{a.device_name}</div>
+                </div>
+                <span className="alert-time">{formatTime(a.created_at)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -979,6 +1037,7 @@ export default function App() {
   const [tuyaConfigured, setTuyaConfigured] = useState(true);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1003,7 +1062,15 @@ export default function App() {
     const token = session.access_token;
     fetchDevices(token);
     const interval = setInterval(() => fetchDevices(token), 30000);
-    return () => clearInterval(interval);
+    // Verifica alertas não lidos a cada 2 minutos
+    const checkAlerts = () => {
+      axios.get(`${API}/alerts`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => setUnreadAlerts(r.data.filter(a => !a.read).length))
+        .catch(() => {});
+    };
+    checkAlerts();
+    const alertInterval = setInterval(checkAlerts, 2 * 60 * 1000);
+    return () => { clearInterval(interval); clearInterval(alertInterval); };
   }, [session]);
 
   const handleToggle = async (id, currentlyOn) => {
@@ -1027,17 +1094,17 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar page={page} setPage={setPage} user={session.user} onLogout={handleLogout} />
+      <Sidebar page={page} setPage={setPage} user={session.user} onLogout={handleLogout} unreadAlerts={unreadAlerts} />
       <div className="main">
         {page==='dashboard'   && <Dashboard    devices={devices} setPage={setPage} />}
         {page==='devices'     && <Devices      devices={devices} loading={loading} onToggle={handleToggle} tuyaConfigured={tuyaConfigured} setPage={setPage} />}
         {page==='automations' && <Automations session={session} devices={devices} />}
-        {page==='alerts'      && <Alerts />}
+        {page==='alerts'      && <Alerts session={session} />}
         {page==='cameras'     && <Cameras devices={devices} />}
         {page==='status'      && <Status   devices={devices} />}
         {page==='settings'    && <Settings session={session} />}
       </div>
-      <BottomNav page={page} setPage={setPage} />
+      <BottomNav page={page} setPage={setPage} unreadAlerts={unreadAlerts} />
       <FloatingAssistant session={session} />
     </div>
   );
