@@ -5,69 +5,21 @@ import './App.css';
 
 const API = 'https://dudufritzs-projects-production.up.railway.app';
 
-// ── LOGO SVG ─────────────────────────────────────────────────
-// Ícone da casa iHome fiel à identidade visual
-function HouseIcon({ size = 80 }) {
-  const teal = '#00AECC';
-  return (
-    <svg width={size} height={size * 0.92} viewBox="0 0 160 148" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Interior escuro da casa */}
-      <rect x="10" y="50" width="140" height="98" fill="rgba(8,10,18,0.85)"/>
-
-      {/* Pilar teal — o "i" — sobe acima do telhado */}
-      <rect x="10" y="4" width="40" height="144" fill={teal}/>
-
-      {/* H branco: pilar direito */}
-      <rect x="102" y="56" width="34" height="86" fill="white"/>
-      {/* H branco: barra horizontal */}
-      <rect x="50" y="88" width="86" height="22" fill="white"/>
-      {/* H branco: pilar esquerdo (leve sobre o teal) */}
-      <rect x="10" y="56" width="40" height="86" fill="rgba(255,255,255,0.18)"/>
-
-      {/* Telhado — outline em V, branco */}
-      <polyline
-        points="0,60 80,4 160,60"
-        stroke="white" strokeWidth="14"
-        fill="none" strokeLinejoin="round" strokeLinecap="round"
-      />
-
-      {/* Pequeno acento teal na base */}
-      <rect x="10" y="146" width="14" height="2" fill={teal}/>
-    </svg>
-  );
-}
-
+// ── LOGO ─────────────────────────────────────────────────────
 // Logo completa para a tela de login
 function LoginLogo() {
-  const teal = '#00AECC';
   return (
     <div style={{ textAlign: 'center', marginBottom: 32 }}>
-      <HouseIcon size={110} />
-      <div style={{ marginTop: 14 }}>
-        <span style={{ color: teal, fontSize: 30, fontWeight: 800, lineHeight: 1 }}>i</span>
-        <span style={{ color: '#fff', fontSize: 30, fontWeight: 800, lineHeight: 1 }}>home</span>
-      </div>
-      <div style={{ fontSize: 13, marginTop: 5 }}>
-        <span style={{ color: 'rgba(255,255,255,0.45)' }}>Automação </span>
-        <span style={{ color: teal, fontWeight: 600 }}>residencial</span>
-      </div>
+      <img src="/logo.png" alt="iHome" style={{ width: 180, display: 'block', margin: '0 auto' }} />
     </div>
   );
 }
 
 // Logo compacta para a sidebar
 function SidebarLogo() {
-  const teal = '#00AECC';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
-      <HouseIcon size={36} />
-      <div>
-        <div style={{ lineHeight: 1 }}>
-          <span style={{ color: teal, fontSize: 16, fontWeight: 800 }}>i</span>
-          <span style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>home</span>
-        </div>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, letterSpacing: '0.05em' }}>residencial</div>
-      </div>
+    <div style={{ padding: '6px 8px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
+      <img src="/logo.png" alt="iHome" style={{ width: 120, display: 'block' }} />
     </div>
   );
 }
