@@ -18,8 +18,8 @@ function LoginLogo() {
 // Logo compacta para a sidebar
 function SidebarLogo() {
   return (
-    <div style={{ padding: '6px 8px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
-      <img src="/logo.png" alt="iHome" style={{ width: 120, display: 'block' }} />
+    <div style={{ padding: '4px 8px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
+      <img src="/logo.png" alt="iHome" style={{ width: 110, display: 'block' }} />
     </div>
   );
 }
@@ -362,6 +362,10 @@ function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
           <div className="page-title">Dispositivos</div>
           <div className="page-subtitle">{devices.filter(d=>d.online).length} de {devices.length} online</div>
         </div>
+        <button onClick={() => setPage('settings')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(59,126,255,0.12)', border: '1px solid rgba(59,126,255,0.25)', borderRadius: 10, padding: '8px 14px', color: '#3B7EFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar
+        </button>
       </div>
       <div className="tabs">{tabs.map(t => <button key={t} className={`tab ${filter===t?'active':''}`} onClick={() => setFilter(t)}>{t}</button>)}</div>
       {filtered.length === 0 && (
