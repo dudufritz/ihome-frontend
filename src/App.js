@@ -267,6 +267,27 @@ function Sidebar({ page, setPage, user, onLogout }) {
   );
 }
 
+// ── NAVEGAÇÃO INFERIOR (mobile) ──────────────────────────────
+function BottomNav({ page, setPage }) {
+  const items = [
+    { id: 'dashboard',   label: 'Início',    icon: Icons.dashboard   },
+    { id: 'devices',     label: 'Dispositivos', icon: Icons.devices  },
+    { id: 'automations', label: 'Automação', icon: Icons.automations },
+    { id: 'alerts',      label: 'Alertas',   icon: Icons.alerts      },
+    { id: 'settings',    label: 'Config.',   icon: Icons.settings    },
+  ];
+  return (
+    <nav className="bottom-nav">
+      {items.map(i => (
+        <button key={i.id} className={`bottom-nav-item ${page===i.id?'active':''}`} onClick={() => setPage(i.id)}>
+          {i.icon}
+          <span>{i.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 // ── TOGGLE ────────────────────────────────────────────────────
 function Toggle({ on, onClick }) {
   return (
@@ -772,6 +793,7 @@ export default function App() {
         {page==='status'      && <Status   devices={devices} />}
         {page==='settings'    && <Settings session={session} />}
       </div>
+      <BottomNav page={page} setPage={setPage} />
     </div>
   );
 }
