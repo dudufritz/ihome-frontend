@@ -194,7 +194,6 @@ function Sidebar({ page, setPage, user, onLogout }) {
   const items = [
     { id: 'dashboard',   label: 'Visão Geral',   icon: Icons.dashboard   },
     { id: 'devices',     label: 'Dispositivos',  icon: Icons.devices     },
-    { id: 'assistant',   label: 'Assistente',    icon: Icons.assistant   },
     { id: 'automations', label: 'Automação',     icon: Icons.automations },
     { id: 'alerts',      label: 'Alertas',       icon: Icons.alerts      },
     { id: 'cameras',     label: 'Câmeras',       icon: Icons.cameras     },
@@ -224,11 +223,11 @@ function Sidebar({ page, setPage, user, onLogout }) {
 // ── NAVEGAÇÃO INFERIOR (mobile) ──────────────────────────────
 function BottomNav({ page, setPage }) {
   const items = [
-    { id: 'dashboard',   label: 'Início',     icon: Icons.dashboard  },
-    { id: 'devices',     label: 'Dispositivos', icon: Icons.devices  },
-    { id: 'assistant',   label: 'Assistente', icon: Icons.assistant  },
-    { id: 'automations', label: 'Automação',  icon: Icons.automations},
-    { id: 'settings',    label: 'Config.',    icon: Icons.settings   },
+    { id: 'dashboard',   label: 'Início',       icon: Icons.dashboard   },
+    { id: 'devices',     label: 'Dispositivos', icon: Icons.devices     },
+    { id: 'automations', label: 'Automação',    icon: Icons.automations },
+    { id: 'alerts',      label: 'Alertas',      icon: Icons.alerts      },
+    { id: 'settings',    label: 'Config.',      icon: Icons.settings    },
   ];
   return (
     <nav className="bottom-nav">
@@ -681,8 +680,25 @@ function Status({ devices }) {
   );
 }
 
-// ── ASSISTENTE IA ─────────────────────────────────────────────
-function Assistant({ session }) {
+// ── LOGO SIMPLIFICADA (para bolha flutuante) ──────────────────
+function IHomeBubbleIcon({ size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Pilar teal */}
+      <rect x="8" y="6" width="11" height="38" rx="1" fill="#00C4CC"/>
+      {/* Telhado branco em V */}
+      <polyline points="4,22 24,6 44,22" stroke="white" strokeWidth="5" fill="none" strokeLinejoin="round" strokeLinecap="round"/>
+      {/* Pilar direito branco */}
+      <rect x="29" y="22" width="11" height="22" rx="1" fill="white"/>
+      {/* Crossbar H branco */}
+      <rect x="19" y="30" width="21" height="7" rx="1" fill="white"/>
+    </svg>
+  );
+}
+
+// ── ASSISTENTE IA (BOLHA FLUTUANTE) ───────────────────────────
+function FloatingAssistant({ session }) {
+  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Olá! Sou o assistente iHome. Diga o que deseja fazer, como "liga a luz da sala" ou "cria rotina para ligar a tomada às 14h e desligar às 20h".' }
   ]);
@@ -693,11 +709,11 @@ function Assistant({ session }) {
   const bottomRef = useRef(null);
   const headers = { Authorization: `Bearer ${session.access_token}` };
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, open]);
 
   useEffect(() => {
-    axios.get(`${API}/schedules`, { headers }).then(r => setSchedules(r.data)).catch(() => {});
-  }, []); // eslint-disable-line
+    if (open) axios.get(`${API}/schedules`, { headers }).then(r => setSchedules(r.data)).catch(() => {});
+  }, [open]); // eslint-disable-line
 
   const sendCommand = async (text) => {
     if (!text.trim() || loading) return;
@@ -708,7 +724,7 @@ function Assistant({ session }) {
       const r = await axios.post(`${API}/ai-command`, { command: text }, { headers });
       setMessages(prev => [...prev, { role: 'assistant', text: r.data.message || r.data.error }]);
       axios.get(`${API}/schedules`, { headers }).then(r => setSchedules(r.data)).catch(() => {});
-    } catch (err) {
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', text: 'Não consegui processar o comando. Tente novamente.' }]);
     }
     setLoading(false);
@@ -716,17 +732,13 @@ function Assistant({ session }) {
 
   const startVoice = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert('Reconhecimento de voz não disponível neste navegador. Use Chrome ou Edge.'); return; }
+    if (!SR) { alert('Reconhecimento de voz não disponível. Use Chrome ou Edge.'); return; }
     const r = new SR();
     r.lang = 'pt-BR';
     r.onstart = () => setListening(true);
     r.onend = () => setListening(false);
     r.onerror = () => setListening(false);
-    r.onresult = e => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
-      sendCommand(text);
-    };
+    r.onresult = e => { const t = e.results[0][0].transcript; setInput(t); sendCommand(t); };
     r.start();
   };
 
@@ -738,58 +750,76 @@ function Assistant({ session }) {
   };
 
   return (
-    <div className="page assistant-page">
-      <div className="page-header">
-        <div>
-          <div className="page-title">Assistente iHome</div>
-          <div className="page-subtitle">Controle por voz ou texto</div>
-        </div>
-      </div>
-
-      {schedules.length > 0 && (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Rotinas ativas</div>
-          {schedules.map(s => (
-            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <div>
-                <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{s.device_name}</div>
-                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 2 }}>
-                  {s.on_time && `Liga às ${s.on_time}`}{s.on_time && s.off_time && ' · '}{s.off_time && `Desliga às ${s.off_time}`}
+    <>
+      {open && (
+        <div className="assistant-overlay" onClick={() => setOpen(false)}>
+          <div className="assistant-panel" onClick={e => e.stopPropagation()}>
+            <div className="assistant-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <IHomeBubbleIcon size={28} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Assistente iHome</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>Voz ou texto</div>
                 </div>
               </div>
-              <button onClick={() => removeSchedule(s.id)} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 11 }}>
-                Remover
+              <button className="assistant-close" onClick={() => setOpen(false)}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-          ))}
+
+            {schedules.length > 0 && (
+              <div className="assistant-schedules">
+                <div className="assistant-schedules-title">Rotinas ativas</div>
+                {schedules.map(s => (
+                  <div key={s.id} className="assistant-schedule-row">
+                    <div>
+                      <div style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>{s.device_name}</div>
+                      <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>
+                        {s.on_time && `Liga ${s.on_time}`}{s.on_time && s.off_time && ' · '}{s.off_time && `Desliga ${s.off_time}`}
+                      </div>
+                    </div>
+                    <button onClick={() => removeSchedule(s.id)} className="schedule-remove-btn">×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="chat-messages">
+              {messages.map((m, i) => (
+                <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
+              ))}
+              {loading && <div className="chat-bubble assistant"><span className="chat-dots"><span/><span/><span/></span></div>}
+              <div ref={bottomRef} />
+            </div>
+
+            <div className="chat-input-row">
+              <input
+                className="chat-input"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendCommand(input)}
+                placeholder="Digite um comando..."
+                disabled={loading}
+                autoFocus
+              />
+              <button className={`chat-mic${listening ? ' listening' : ''}`} onClick={startVoice} disabled={loading} title="Falar">
+                {Icons.assistant}
+              </button>
+              <button className="chat-send" onClick={() => sendCommand(input)} disabled={loading || !input.trim()}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="chat-messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
-        ))}
-        {loading && <div className="chat-bubble assistant"><span className="chat-dots"><span/><span/><span/></span></div>}
-        <div ref={bottomRef} />
-      </div>
-
-      <div className="chat-input-row">
-        <input
-          className="chat-input"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && sendCommand(input)}
-          placeholder="Digite um comando..."
-          disabled={loading}
-        />
-        <button className={`chat-mic${listening ? ' listening' : ''}`} onClick={startVoice} disabled={loading} title="Falar">
-          {Icons.assistant}
-        </button>
-        <button className="chat-send" onClick={() => sendCommand(input)} disabled={loading || !input.trim()} title="Enviar">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </button>
-      </div>
-    </div>
+      <button className={`fab${open ? ' fab-open' : ''}`} onClick={() => setOpen(!open)} title="Assistente iHome">
+        {open
+          ? <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          : <IHomeBubbleIcon size={30} />
+        }
+      </button>
+    </>
   );
 }
 
@@ -853,7 +883,6 @@ export default function App() {
       <div className="main">
         {page==='dashboard'   && <Dashboard    devices={devices} setPage={setPage} />}
         {page==='devices'     && <Devices      devices={devices} loading={loading} onToggle={handleToggle} tuyaConfigured={tuyaConfigured} setPage={setPage} />}
-        {page==='assistant'   && <Assistant    session={session} />}
         {page==='automations' && <Automations />}
         {page==='alerts'      && <Alerts />}
         {page==='cameras'     && <Cameras devices={devices} />}
@@ -861,6 +890,7 @@ export default function App() {
         {page==='settings'    && <Settings session={session} />}
       </div>
       <BottomNav page={page} setPage={setPage} />
+      <FloatingAssistant session={session} />
     </div>
   );
 }
