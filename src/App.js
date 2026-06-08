@@ -713,7 +713,7 @@ function Automations({ session, devices }) {
         <div className="loading">Carregando rotinas...</div>
       ) : schedules.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.2 }}>{Icons.automations}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.2, width: 48, height: 48, margin: '0 auto 16px' }}><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Nenhuma rotina criada</div>
           <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, marginBottom: 24 }}>Crie uma rotina acima ou use o assistente para criar por voz.</div>
         </div>
@@ -800,7 +800,7 @@ function Alerts({ session }) {
         <div className="loading">Carregando alertas...</div>
       ) : alerts.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.2 }}>{Icons.alerts}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.2, width: 48, height: 48, margin: '0 auto 16px' }}><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Nenhum alerta</div>
           <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>Os dispositivos estão sendo monitorados. Alertas de conexão aparecerão aqui.</div>
         </div>
