@@ -431,7 +431,7 @@ function Settings({ session }) {
 
   const headers = { Authorization: `Bearer ${session.access_token}` };
 
-  const showMsg = (text, type = 'success') => { setMsg(text); setMsgType(type); setTimeout(() => setMsg(''), 4000); };
+  const showMsg = (text, type = 'success') => { setMsg(text); setMsgType(type); setTimeout(() => setMsg(''), type === 'error' ? 8000 : 4000); };
 
   useEffect(() => {
     axios.get(`${API}/tuya-credentials`, { headers })
@@ -453,7 +453,7 @@ function Settings({ session }) {
 
   const toggleNotifications = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      showMsg('Notificações push não suportadas neste navegador.', 'error'); return;
+      showMsg('Notificações não suportadas neste navegador.', 'error'); return;
     }
     setPushLoading(true);
     try {
@@ -468,16 +468,27 @@ function Settings({ session }) {
         setPushEnabled(false);
         showMsg('Notificações desativadas.');
       } else {
-        // Ativar
+        // Passo 1: permissão
         const permission = await Notification.requestPermission();
-        if (permission !== 'granted') { showMsg('Permissão de notificação negada.', 'error'); setPushLoading(false); return; }
+        if (permission !== 'granted') {
+          showMsg('Permissão negada. Libere notificações nas configurações do navegador.', 'error');
+          setPushLoading(false); return;
+        }
+        // Passo 2: registrar service worker
         const reg = await navigator.serviceWorker.register('/sw.js');
         await navigator.serviceWorker.ready;
+        // Passo 3: buscar chave pública VAPID
         const { data: { key } } = await axios.get(`${API}/vapid-public-key`);
+        if (!key) {
+          showMsg('Servidor não configurado para notificações. Tente mais tarde.', 'error');
+          setPushLoading(false); return;
+        }
+        // Passo 4: assinar push
         const sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(key),
         });
+        // Passo 5: salvar no backend
         await axios.post(`${API}/push-subscribe`, { subscription: sub.toJSON() }, { headers });
         setPushEnabled(true);
         showMsg('Notificações ativadas! Você será avisado quando dispositivos ficarem offline.');
