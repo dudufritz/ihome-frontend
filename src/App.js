@@ -1644,12 +1644,26 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [inviteToast, setInviteToast] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session); setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session));
+    // Verifica parâmetro ?invite= na URL (vindo do e-mail de convite)
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get('invite');
+    if (invite === 'accepted') {
+      setInviteToast({ type: 'success', msg: '✅ Convite aceito! Você agora tem acesso à casa.' });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (invite === 'declined') {
+      setInviteToast({ type: 'info', msg: 'Convite recusado.' });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (invite === 'invalid') {
+      setInviteToast({ type: 'error', msg: 'Este convite já foi usado ou expirou.' });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     return () => subscription.unsubscribe();
   }, []);
 
@@ -1701,6 +1715,17 @@ export default function App() {
 
   return (
     <div className="app">
+      {inviteToast && (
+        <div style={{
+          position:'fixed', top:20, left:'50%', transform:'translateX(-50%)',
+          background: inviteToast.type==='success' ? '#166534' : inviteToast.type==='error' ? '#7f1d1d' : '#1e3a5f',
+          color:'#fff', padding:'12px 24px', borderRadius:12, zIndex:9999,
+          boxShadow:'0 4px 20px rgba(0,0,0,0.4)', fontSize:14, maxWidth:340, textAlign:'center'
+        }}>
+          {inviteToast.msg}
+          <button onClick={() => setInviteToast(null)} style={{ marginLeft:12, background:'none', border:'none', color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:16 }}>✕</button>
+        </div>
+      )}
       <Sidebar page={page} setPage={setPage} user={session.user} onLogout={handleLogout} unreadAlerts={unreadAlerts} />
       <div className="main">
         {page==='dashboard'   && <Dashboard    devices={devices} setPage={setPage} session={session} />}
