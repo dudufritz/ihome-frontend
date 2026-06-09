@@ -405,6 +405,14 @@ function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
 }
 
 // ── CONFIGURAÇÕES ─────────────────────────────────────────────
+// Converte VAPID key de base64url para Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
 function Settings({ session }) {
   const [accessId, setAccessId] = useState('');
   const [accessSecret, setAccessSecret] = useState('');
@@ -418,6 +426,8 @@ function Settings({ session }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState('success');
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
 
   const headers = { Authorization: `Bearer ${session.access_token}` };
 
@@ -431,7 +441,52 @@ function Settings({ session }) {
       }).catch(console.error);
     axios.get(`${API}/my-devices`, { headers })
       .then(r => setMyDevices(r.data)).catch(console.error);
+    // Verifica se já tem notificações ativas
+    if ('Notification' in window && Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          if (sub) setPushEnabled(true);
+        });
+      }).catch(() => {});
+    }
   }, []); // eslint-disable-line
+
+  const toggleNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      showMsg('Notificações push não suportadas neste navegador.', 'error'); return;
+    }
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        // Desativar
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await sub.unsubscribe();
+          await axios.delete(`${API}/push-subscribe`, { data: { endpoint: sub.endpoint }, headers });
+        }
+        setPushEnabled(false);
+        showMsg('Notificações desativadas.');
+      } else {
+        // Ativar
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') { showMsg('Permissão de notificação negada.', 'error'); setPushLoading(false); return; }
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        const { data: { key } } = await axios.get(`${API}/vapid-public-key`);
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key),
+        });
+        await axios.post(`${API}/push-subscribe`, { subscription: sub.toJSON() }, { headers });
+        setPushEnabled(true);
+        showMsg('Notificações ativadas! Você será avisado quando dispositivos ficarem offline.');
+      }
+    } catch (err) {
+      showMsg('Erro: ' + err.message, 'error');
+    }
+    setPushLoading(false);
+  };
 
   const saveCredentials = async e => {
     e.preventDefault();
@@ -564,6 +619,34 @@ function Settings({ session }) {
           <button type="submit" className="login-btn">Adicionar Dispositivo</button>
         </form>
       </div>
+
+      {/* Notificações Push */}
+      {'Notification' in window && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 3 }}>Notificações</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                {pushEnabled
+                  ? 'Ativo — você será avisado quando dispositivos ficarem offline.'
+                  : 'Receba alertas quando seus dispositivos ficarem offline ou voltarem a funcionar.'}
+              </div>
+            </div>
+            <button
+              onClick={toggleNotifications}
+              disabled={pushLoading}
+              style={{
+                background: pushEnabled ? 'rgba(239,68,68,0.12)' : 'rgba(59,126,255,0.15)',
+                color: pushEnabled ? '#ef4444' : '#3B7EFF',
+                border: `1px solid ${pushEnabled ? 'rgba(239,68,68,0.25)' : 'rgba(59,126,255,0.25)'}`,
+                borderRadius: 10, padding: '8px 14px', cursor: 'pointer', fontSize: 13,
+                fontWeight: 600, flexShrink: 0, minWidth: 90, textAlign: 'center',
+              }}>
+              {pushLoading ? '...' : pushEnabled ? 'Desativar' : 'Ativar'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Desinstalar app */}
       <UninstallCard />
