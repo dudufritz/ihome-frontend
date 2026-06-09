@@ -406,21 +406,62 @@ function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
     ? devices
     : devices.filter(d => d.room?.toLowerCase().includes(filter.toLowerCase()));
 
+  const AddBtn = () => (
+    <button
+      onClick={() => setPage('settings')}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: '#3B7EFF', border: 'none',
+        borderRadius: 10, padding: '9px 16px',
+        color: '#fff', fontSize: 13, fontWeight: 600,
+        cursor: 'pointer', flexShrink: 0,
+        boxShadow: '0 2px 10px rgba(59,126,255,0.35)',
+      }}
+    >
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Adicionar
+    </button>
+  );
+
   if (loading) return <div className="loading">Carregando dispositivos...</div>;
 
   if (!tuyaConfigured) {
     return (
       <div className="page">
-        <div className="page-header"><div className="page-title">Dispositivos</div></div>
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.3 }}>
-            {Icons.settings}
+        <div className="page-header">
+          <div><div className="page-title">Dispositivos</div></div>
+          <AddBtn />
+        </div>
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', padding: '60px 20px', gap: 16,
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 18,
+            background: 'rgba(59,126,255,0.1)',
+            border: '1.5px solid rgba(59,126,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(59,126,255,0.7)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="3"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
           </div>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Credenciais não configuradas</div>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 24 }}>
-            Para ver e controlar seus dispositivos, configure suas credenciais em Configurações.
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Nenhum dispositivo conectado</div>
+          <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
+            Configure suas credenciais Tuya em Configurações para visualizar e controlar seus dispositivos.
           </div>
-          <button className="login-btn" onClick={() => setPage('settings')} style={{ maxWidth: 200, margin: '0 auto' }}>
+          <button
+            onClick={() => setPage('settings')}
+            style={{
+              marginTop: 8, background: '#3B7EFF', border: 'none',
+              borderRadius: 10, padding: '10px 24px',
+              color: '#fff', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', boxShadow: '0 2px 10px rgba(59,126,255,0.35)',
+            }}
+          >
             Ir para Configurações
           </button>
         </div>
@@ -435,15 +476,28 @@ function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
           <div className="page-title">Dispositivos</div>
           <div className="page-subtitle">{devices.filter(d=>d.online).length} de {devices.length} online</div>
         </div>
-        <button onClick={() => setPage('settings')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(59,126,255,0.12)', border: '1px solid rgba(59,126,255,0.25)', borderRadius: 10, padding: '8px 14px', color: '#3B7EFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Adicionar
-        </button>
+        <AddBtn />
       </div>
       <div className="tabs">{tabs.map(t => <button key={t} className={`tab ${filter===t?'active':''}`} onClick={() => setFilter(t)}>{t}</button>)}</div>
       {filtered.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 28, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
-          Nenhum dispositivo encontrado. Adicione em Configurações.
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '48px 20px', gap: 12,
+        }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1.5px solid rgba(255,255,255,0.07)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="3"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </div>
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+            Nenhum dispositivo encontrado nesta categoria.
+          </div>
         </div>
       )}
       <div className="grid-3">
