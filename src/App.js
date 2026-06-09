@@ -690,6 +690,10 @@ function Settings({ session, onLogout }) {
   const [msgType, setMsgType] = useState('success');
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [shares, setShares] = useState([]);
+  const [sharedWithMe, setSharedWithMe] = useState([]);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [sharingLoading, setSharingLoading] = useState(false);
   const [discovering, setDiscovering] = useState(false);
   const [discovered, setDiscovered] = useState(null); // null = não buscado, [] = vazio
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -706,7 +710,9 @@ function Settings({ session, onLogout }) {
         if (r.data.configured) setAccessId(r.data.tuya_access_id || '');
       }).catch(console.error);
     axios.get(`${API}/my-devices`, { headers })
-      .then(r => setMyDevices(r.data)).catch(console.error);
+      .then(r => setMyDevices(r.data.filter(d => d.access_type === 'own' || !d.access_type))).catch(console.error);
+    axios.get(`${API}/shares`, { headers }).then(r => setShares(r.data)).catch(console.error);
+    axios.get(`${API}/shared-with-me`, { headers }).then(r => setSharedWithMe(r.data)).catch(console.error);
     // Verifica se já tem notificações ativas
     if ('Notification' in window && Notification.permission === 'granted') {
       navigator.serviceWorker.ready.then(reg => {
@@ -805,6 +811,37 @@ function Settings({ session, onLogout }) {
       showMsg('Erro ao salvar: ' + (err.response?.data?.error || err.message), 'error');
     }
     setLoading(false);
+  };
+
+  const inviteGuest = async e => {
+    e.preventDefault();
+    if (!guestEmail.trim()) return;
+    setSharingLoading(true);
+    try {
+      const r = await axios.post(`${API}/shares`, { guest_email: guestEmail.trim(), permission: 'control' }, { headers });
+      setShares(prev => [r.data, ...prev.filter(s => s.guest_email !== guestEmail.trim())]);
+      setGuestEmail('');
+      showMsg(`Acesso concedido para ${guestEmail.trim()}.`);
+    } catch (err) {
+      showMsg('Erro: ' + (err.response?.data?.error || err.message), 'error');
+    }
+    setSharingLoading(false);
+  };
+
+  const removeShare = async id => {
+    try {
+      await axios.delete(`${API}/shares/${id}`, { headers });
+      setShares(prev => prev.filter(s => s.id !== id));
+      showMsg('Acesso removido.');
+    } catch { showMsg('Erro ao remover.', 'error'); }
+  };
+
+  const leaveSharedHome = async id => {
+    try {
+      await axios.delete(`${API}/shared-with-me/${id}`, { headers });
+      setSharedWithMe(prev => prev.filter(s => s.id !== id));
+      showMsg('Você saiu da casa compartilhada.');
+    } catch { showMsg('Erro.', 'error'); }
   };
 
   const discoverDevices = async () => {
@@ -1024,6 +1061,66 @@ function Settings({ session, onLogout }) {
           <button type="submit" className="login-btn">Adicionar Dispositivo</button>
         </form>
       </div>
+
+      {/* Compartilhar casa */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 4 }}>Compartilhar casa</div>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 16, lineHeight: 1.5 }}>
+          Convide familiares para controlar seus dispositivos. Eles precisam ter uma conta no iHome.
+        </div>
+
+        {/* Pessoas com acesso */}
+        {shares.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            {shares.map(s => (
+              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div>
+                  <div style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{s.guest_email}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>Controle total</div>
+                </div>
+                <button onClick={() => removeShare(s.id)}
+                  style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>
+                  Remover
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Formulário de convite */}
+        <form onSubmit={inviteGuest} style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="email"
+            value={guestEmail}
+            onChange={e => setGuestEmail(e.target.value)}
+            placeholder="E-mail do familiar"
+            style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none' }}
+          />
+          <button type="submit" disabled={sharingLoading || !guestEmail.trim()}
+            style={{ background: '#3B7EFF', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0, opacity: !guestEmail.trim() ? 0.5 : 1 }}>
+            {sharingLoading ? '...' : 'Convidar'}
+          </button>
+        </form>
+      </div>
+
+      {/* Casas compartilhadas comigo */}
+      {sharedWithMe.length > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 12 }}>Casas compartilhadas comigo</div>
+          {sharedWithMe.map(s => (
+            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div>
+                <div style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{s.owner_email}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{s.device_count} dispositivo{s.device_count !== 1 ? 's' : ''}</div>
+              </div>
+              <button onClick={() => leaveSharedHome(s.id)}
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>
+                Sair
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Notificações Push */}
       {'Notification' in window && (
@@ -1582,10 +1679,11 @@ export default function App() {
     return () => { clearInterval(interval); clearInterval(alertInterval); };
   }, [session]);
 
-  const handleToggle = async (id, currentlyOn) => {
+  const handleToggle = async (id, currentlyOn, ownerEmail) => {
     try {
-      await axios.post(`${API}/devices/${id}/command`,
-        { commands: [{ code: 'switch_1', value: !currentlyOn }] },
+      const body = { commands: [{ code: 'switch_1', value: !currentlyOn }] };
+      if (ownerEmail && ownerEmail !== session.user.email) body.owner_email = ownerEmail;
+      await axios.post(`${API}/devices/${id}/command`, body,
         { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
       setTimeout(() => fetchDevices(session.access_token), 1500);
