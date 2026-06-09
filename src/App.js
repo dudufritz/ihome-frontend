@@ -675,7 +675,7 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
-function Settings({ session }) {
+function Settings({ session, onLogout }) {
   const [accessId, setAccessId] = useState('');
   const [accessSecret, setAccessSecret] = useState('');
   const [baseUrl, setBaseUrl] = useState('https://openapi.tuyaus.com');
@@ -1055,6 +1055,23 @@ function Settings({ session }) {
 
       {/* Desinstalar app */}
       <UninstallCard />
+
+      {/* Sair da conta */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 3 }}>Conta</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {session?.user?.email}
+            </div>
+          </div>
+          <button onClick={onLogout}
+            style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sair
+          </button>
+        </div>
+      </div>
 
       {/* Rodapé com versão */}
       <div style={{ textAlign: 'center', marginTop: 24, paddingBottom: 8 }}>
@@ -1595,7 +1612,7 @@ export default function App() {
         {page==='cameras'     && <Cameras devices={devices} />}
         {page==='status'      && <Status   devices={devices} />}
         {page==='help'        && <Help />}
-        {page==='settings'    && <Settings session={session} />}
+        {page==='settings'    && <Settings session={session} onLogout={handleLogout} />}
       </div>
       <BottomNav page={page} setPage={setPage} unreadAlerts={unreadAlerts} />
       <FloatingAssistant session={session} />
