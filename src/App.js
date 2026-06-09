@@ -690,6 +690,10 @@ function Settings({ session }) {
   const [msgType, setMsgType] = useState('success');
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [discovered, setDiscovered] = useState(null); // null = não buscado, [] = vazio
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [addingBulk, setAddingBulk] = useState(false);
 
   const headers = { Authorization: `Bearer ${session.access_token}` };
 
@@ -803,6 +807,46 @@ function Settings({ session }) {
     setLoading(false);
   };
 
+  const discoverDevices = async () => {
+    if (!configured) { showMsg('Configure suas credenciais Tuya primeiro.', 'error'); return; }
+    setDiscovering(true);
+    setDiscovered(null);
+    setSelectedIds(new Set());
+    try {
+      const r = await axios.get(`${API}/discover-devices`, { headers });
+      setDiscovered(r.data.devices || []);
+    } catch (err) {
+      showMsg('Erro ao buscar dispositivos: ' + (err.response?.data?.error || err.message), 'error');
+    }
+    setDiscovering(false);
+  };
+
+  const toggleSelect = id => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const addSelected = async () => {
+    const toAdd = (discovered || []).filter(d => selectedIds.has(d.tuya_id) && !d.already_added);
+    if (toAdd.length === 0) { showMsg('Selecione pelo menos um dispositivo novo.', 'error'); return; }
+    setAddingBulk(true);
+    let added = 0;
+    for (const d of toAdd) {
+      try {
+        const r = await axios.post(`${API}/my-devices`, { tuya_id: d.tuya_id, name: d.name, room: '' }, { headers });
+        setMyDevices(prev => [...prev, r.data]);
+        setDiscovered(prev => prev.map(x => x.tuya_id === d.tuya_id ? { ...x, already_added: true } : x));
+        added++;
+      } catch { /* ignora erro individual */ }
+    }
+    setSelectedIds(new Set());
+    showMsg(`${added} dispositivo${added !== 1 ? 's' : ''} adicionado${added !== 1 ? 's' : ''} com sucesso!`);
+    setAddingBulk(false);
+  };
+
   const addDevice = async e => {
     e.preventDefault();
     if (newProtocol !== 'tuya') { showMsg('Integração com ' + newProtocol + ' em desenvolvimento. Em breve disponível.', 'error'); return; }
@@ -892,9 +936,69 @@ function Settings({ session }) {
           </div>
         ))}
 
-        {/* Adicionar dispositivo */}
-        <form onSubmit={addDevice} style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Adicionar dispositivo</div>
+        {/* Detectar dispositivos automaticamente */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Detectar da conta Tuya</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Importa automaticamente todos os dispositivos da sua conta</div>
+            </div>
+            <button type="button" onClick={discoverDevices} disabled={discovering || !configured}
+              style={{ background: 'rgba(59,126,255,0.15)', color: '#3B7EFF', border: '1px solid rgba(59,126,255,0.25)', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0, opacity: !configured ? 0.4 : 1 }}>
+              {discovering ? 'Buscando...' : 'Detectar'}
+            </button>
+          </div>
+
+          {/* Lista de dispositivos descobertos */}
+          {discovered !== null && (
+            <div>
+              {discovered.length === 0 && (
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, padding: '8px 0' }}>
+                  Nenhum dispositivo encontrado na conta Tuya. Verifique se os dispositivos estão vinculados ao seu projeto.
+                </div>
+              )}
+              {discovered.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 10 }}>
+                    {discovered.length} dispositivo{discovered.length !== 1 ? 's' : ''} encontrado{discovered.length !== 1 ? 's' : ''} — selecione os que deseja adicionar:
+                  </div>
+                  {discovered.map(d => (
+                    <div key={d.tuya_id} onClick={() => !d.already_added && toggleSelect(d.tuya_id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: d.already_added ? 'default' : 'pointer', opacity: d.already_added ? 0.45 : 1 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${selectedIds.has(d.tuya_id) ? '#3B7EFF' : 'rgba(255,255,255,0.2)'}`, background: selectedIds.has(d.tuya_id) ? '#3B7EFF' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .15s' }}>
+                        {selectedIds.has(d.tuya_id) && <svg viewBox="0 0 12 12" width="12" height="12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </div>
+                      <DeviceIcon category={d.category} size={16} color={d.online ? '#3B7EFF' : 'rgba(255,255,255,0.3)'} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>
+                          {d.product_name && <span>{d.product_name} · </span>}
+                          <span style={{ fontFamily: 'monospace', fontSize: 10 }}>{d.tuya_id}</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, flexShrink: 0,
+                        background: d.already_added ? 'rgba(255,255,255,0.06)' : d.online ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                        color: d.already_added ? 'rgba(255,255,255,0.3)' : d.online ? '#22c55e' : '#ef4444',
+                      }}>
+                        {d.already_added ? 'Adicionado' : d.online ? 'Online' : 'Offline'}
+                      </div>
+                    </div>
+                  ))}
+                  {discovered.some(d => !d.already_added) && (
+                    <button type="button" onClick={addSelected} disabled={selectedIds.size === 0 || addingBulk}
+                      style={{ marginTop: 12, width: '100%', padding: '10px', background: selectedIds.size > 0 ? '#3B7EFF' : 'rgba(59,126,255,0.15)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: selectedIds.size > 0 ? 'pointer' : 'default', opacity: selectedIds.size === 0 ? 0.5 : 1, transition: 'all .15s' }}>
+                      {addingBulk ? 'Adicionando...' : `Adicionar ${selectedIds.size > 0 ? selectedIds.size + ' selecionado' + (selectedIds.size !== 1 ? 's' : '') : 'selecionados'}`}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Adicionar dispositivo manualmente */}
+        <form onSubmit={addDevice} style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Adicionar manualmente</div>
 
           <div className="login-field" style={{ marginBottom: 10 }}>
             <label>Protocolo</label>
