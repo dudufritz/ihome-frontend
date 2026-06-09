@@ -452,13 +452,18 @@ function Settings({ session }) {
   }, []); // eslint-disable-line
 
   const toggleNotifications = async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      showMsg('Notificações não suportadas neste navegador.', 'error'); return;
+    if (!('serviceWorker' in navigator)) {
+      showMsg('❌ Service Worker não suportado neste navegador.', 'error'); return;
+    }
+    if (!('PushManager' in window)) {
+      showMsg('❌ Push notifications não suportadas. Use Chrome ou Edge.', 'error'); return;
+    }
+    if (!('Notification' in window)) {
+      showMsg('❌ API de Notificação não disponível.', 'error'); return;
     }
     setPushLoading(true);
     try {
       if (pushEnabled) {
-        // Desativar
         const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
@@ -469,32 +474,55 @@ function Settings({ session }) {
         showMsg('Notificações desativadas.');
       } else {
         // Passo 1: permissão
+        showMsg('Solicitando permissão...');
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-          showMsg('Permissão negada. Libere notificações nas configurações do navegador.', 'error');
+          showMsg('❌ Permissão negada. Vá em Configurações do navegador e libere notificações para ihomeauto.com.', 'error');
           setPushLoading(false); return;
         }
-        // Passo 2: registrar service worker
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        await navigator.serviceWorker.ready;
-        // Passo 3: buscar chave pública VAPID
-        const { data: { key } } = await axios.get(`${API}/vapid-public-key`);
+        // Passo 2: registrar SW
+        showMsg('Registrando service worker...');
+        let reg;
+        try {
+          reg = await navigator.serviceWorker.register('/sw.js');
+          await navigator.serviceWorker.ready;
+        } catch (swErr) {
+          showMsg('❌ Erro no service worker: ' + swErr.message, 'error');
+          setPushLoading(false); return;
+        }
+        // Passo 3: chave VAPID
+        showMsg('Buscando chave do servidor...');
+        let key;
+        try {
+          const r = await axios.get(`${API}/vapid-public-key`);
+          key = r.data.key;
+        } catch {
+          showMsg('❌ Não foi possível conectar ao servidor. Tente novamente.', 'error');
+          setPushLoading(false); return;
+        }
         if (!key) {
-          showMsg('Servidor não configurado para notificações. Tente mais tarde.', 'error');
+          showMsg('❌ Servidor ainda não configurado para notificações. Aguarde alguns minutos.', 'error');
           setPushLoading(false); return;
         }
         // Passo 4: assinar push
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(key),
-        });
+        showMsg('Criando assinatura...');
+        let sub;
+        try {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(key),
+          });
+        } catch (subErr) {
+          showMsg('❌ Erro ao assinar push: ' + subErr.message, 'error');
+          setPushLoading(false); return;
+        }
         // Passo 5: salvar no backend
         await axios.post(`${API}/push-subscribe`, { subscription: sub.toJSON() }, { headers });
         setPushEnabled(true);
-        showMsg('Notificações ativadas! Você será avisado quando dispositivos ficarem offline.');
+        showMsg('✅ Notificações ativadas! Você será avisado quando dispositivos ficarem offline.');
       }
     } catch (err) {
-      showMsg('Erro: ' + err.message, 'error');
+      showMsg('❌ Erro inesperado: ' + err.message, 'error');
     }
     setPushLoading(false);
   };
