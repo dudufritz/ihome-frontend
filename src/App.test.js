@@ -4,17 +4,17 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-// Mock supabase
-jest.mock('./supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: jest.fn(),
-      onAuthStateChange: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      resetPasswordForEmail: jest.fn(),
-      signOut: jest.fn(),
-    },
+// Mock do cliente de autenticacao proprio (src/auth.js)
+jest.mock('./auth', () => ({
+  API: 'http://localhost:3001',
+  auth: {
+    getSession: jest.fn(),
+    onAuthStateChange: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signUp: jest.fn(),
+    resetPasswordForEmail: jest.fn(),
+    resetPassword: jest.fn(),
+    signOut: jest.fn(),
   },
 }));
 
@@ -55,18 +55,18 @@ afterAll(() => {
 
 import App from './App';
 import axios from 'axios';
-import { supabase } from './supabase';
+import { auth } from './auth';
 
 // Helper para configurar mocks de auth
 function setupAuthMocks({ session = null } = {}) {
-  supabase.auth.getSession.mockResolvedValue({ data: { session }, error: null });
-  supabase.auth.onAuthStateChange.mockReturnValue({
+  auth.getSession.mockResolvedValue({ data: { session }, error: null });
+  auth.onAuthStateChange.mockReturnValue({
     data: { subscription: { unsubscribe: jest.fn() } },
   });
-  supabase.auth.signInWithPassword.mockResolvedValue({ error: null });
-  supabase.auth.signUp.mockResolvedValue({ error: null });
-  supabase.auth.resetPasswordForEmail.mockResolvedValue({ error: null });
-  supabase.auth.signOut.mockResolvedValue({});
+  auth.signInWithPassword.mockResolvedValue({ error: null });
+  auth.signUp.mockResolvedValue({ error: null });
+  auth.resetPasswordForEmail.mockResolvedValue({ error: null });
+  auth.signOut.mockResolvedValue({});
   axios.get = jest.fn().mockResolvedValue({ data: { result: { list: [] } } });
   axios.post = jest.fn().mockResolvedValue({ data: {} });
   axios.put = jest.fn().mockResolvedValue({ data: {} });
@@ -171,11 +171,11 @@ describe('Login — submit', () => {
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'u@t.com' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 6 caracteres'), { target: { value: '123456' } });
     await act(async () => { fireEvent.click(screen.getByText('Entrar')); });
-    expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({ email: 'u@t.com', password: '123456' });
+    expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'u@t.com', password: '123456' });
   });
 
   test('exibe erro de credenciais inválidas', async () => {
-    supabase.auth.signInWithPassword.mockResolvedValueOnce({ error: { message: 'bad' } });
+    auth.signInWithPassword.mockResolvedValueOnce({ error: { message: 'bad' } });
     render(<App />);
     await waitFor(() => screen.getByPlaceholderText('seu@email.com'), { timeout: 3000 });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'b@t.com' } });
@@ -218,7 +218,7 @@ describe('Login — registro', () => {
     fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 6 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
-    expect(supabase.auth.signUp).toHaveBeenCalled();
+    expect(auth.signUp).toHaveBeenCalled();
   });
 
   test('exibe mensagem de sucesso após signUp', async () => {
@@ -231,8 +231,8 @@ describe('Login — registro', () => {
     await waitFor(() => expect(screen.getByText(/Verifique seu e-mail/)).toBeInTheDocument());
   });
 
-  test('exibe erro do supabase no registro', async () => {
-    supabase.auth.signUp.mockResolvedValueOnce({ error: { message: 'Email taken' } });
+  test('exibe erro do backend no registro', async () => {
+    auth.signUp.mockResolvedValueOnce({ error: { message: 'Email taken' } });
     fireEvent.change(screen.getByPlaceholderText('Seu nome completo'), { target: { value: 'Eduardo Fritz' } });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
     fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '529.982.247-25' } });
@@ -252,7 +252,7 @@ describe('Login — forgot', () => {
     await waitFor(() => screen.getByText('Enviar link'));
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'u@t.com' } });
     await act(async () => { fireEvent.click(screen.getByText('Enviar link')); });
-    expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('u@t.com', expect.any(Object));
+    expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('u@t.com', expect.any(Object));
   });
 
   test('exibe sucesso ao enviar link', async () => {
@@ -266,7 +266,7 @@ describe('Login — forgot', () => {
   });
 
   test('exibe erro quando forgot falha', async () => {
-    supabase.auth.resetPasswordForEmail.mockResolvedValueOnce({ error: { message: 'Not found' } });
+    auth.resetPasswordForEmail.mockResolvedValueOnce({ error: { message: 'Not found' } });
     render(<App />);
     await waitFor(() => screen.getByText('Esqueci minha senha'), { timeout: 3000 });
     fireEvent.click(screen.getByText('Esqueci minha senha'));
@@ -284,12 +284,12 @@ const mockSession = {
 };
 
 function setupSessionMocks() {
-  supabase.auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
-  supabase.auth.onAuthStateChange.mockImplementation((cb) => {
+  auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
+  auth.onAuthStateChange.mockImplementation((cb) => {
     setTimeout(() => cb('SIGNED_IN', mockSession), 0);
     return { data: { subscription: { unsubscribe: jest.fn() } } };
   });
-  supabase.auth.signOut.mockResolvedValue({});
+  auth.signOut.mockResolvedValue({});
   axios.get = jest.fn().mockImplementation((url) => {
     if (url.includes('/devices'))   return Promise.resolve({ data: { result: { list: [] } } });
     if (url.includes('/alerts'))    return Promise.resolve({ data: [] });
@@ -337,7 +337,7 @@ describe('App — dashboard (sessão ativa)', () => {
     render(<App />);
     await waitFor(() => screen.getByText('Sair'), { timeout: 3000 });
     fireEvent.click(screen.getByText('Sair'));
-    expect(supabase.auth.signOut).toHaveBeenCalled();
+    expect(auth.signOut).toHaveBeenCalled();
   });
 
   test('navega para Alertas ao clicar no menu', async () => {
@@ -380,5 +380,243 @@ describe('App — dashboard (sessão ativa)', () => {
     render(<App />);
     await waitFor(() => screen.getByText('Painel Principal'), { timeout: 3000 });
     await waitFor(() => expect(screen.getByText('Luz sala')).toBeInTheDocument(), { timeout: 3000 });
+  });
+});
+
+// ── TELA DE AUDITORIA ─────────────────────────────────────────
+// O registro de auditoria e a funcionalidade mais sensivel do app: e por
+// ela que o dono da casa descobre o que um convidado fez. Os testes abaixo
+// cobrem o que a tela precisa acertar para cumprir esse papel.
+
+/** Entrada de auditoria completa, com valores padrao sobrescreviveis. */
+function entrada(overrides = {}) {
+  return {
+    id: 1,
+    home_owner_email: 'eduardo@test.com',
+    actor_email: 'eduardo@test.com',
+    action: 'device.command',
+    device_id: 'dev-1',
+    device_name: 'Lampada da Sala',
+    details: { summary: 'Ligou' },
+    result: 'success',
+    error_message: null,
+    ip_address: '203.0.113.10',
+    created_at: '2026-09-01T14:30:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * Prepara os mocks da tela de auditoria.
+ * A ordem dos testes de URL importa: '/audit-log/actors' tambem contem
+ * '/audit-log', entao a rota mais especifica precisa ser checada primeiro.
+ */
+function mockAuditoria({ entries = [], total = null, actors = ['eduardo@test.com'] } = {}) {
+  axios.get = jest.fn().mockImplementation((url) => {
+    if (url.includes('/audit-log/actors')) return Promise.resolve({ data: actors });
+    if (url.includes('/audit-log')) {
+      return Promise.resolve({
+        data: { total: total ?? entries.length, limit: 50, offset: 0, entries },
+      });
+    }
+    if (url.includes('/devices'))   return Promise.resolve({ data: { result: { list: [] } } });
+    if (url.includes('/alerts'))    return Promise.resolve({ data: [] });
+    if (url.includes('/schedules')) return Promise.resolve({ data: [] });
+    return Promise.resolve({ data: {} });
+  });
+}
+
+/** Renderiza o app ja logado e navega ate a aba Auditoria. */
+async function abrirAuditoria() {
+  render(<App />);
+  await waitFor(() => screen.getAllByText('Auditoria').length > 0, { timeout: 3000 });
+  await act(async () => { fireEvent.click(screen.getAllByText('Auditoria')[0]); });
+}
+
+describe('Auditoria — tela', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupSessionMocks();
+  });
+
+  test('item Auditoria aparece na navegacao', async () => {
+    mockAuditoria();
+    render(<App />);
+    await waitFor(() => expect(screen.getAllByText('Auditoria').length).toBeGreaterThan(0), { timeout: 3000 });
+  });
+
+  test('busca os registros e a lista de atores ao abrir', async () => {
+    mockAuditoria();
+    await abrirAuditoria();
+    await waitFor(() => {
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/audit-log?'), expect.any(Object)
+      );
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/audit-log/actors'), expect.any(Object)
+      );
+    }, { timeout: 3000 });
+  });
+
+  test('estado vazio explica que as acoes passarao a ser registradas', async () => {
+    mockAuditoria({ entries: [] });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('Nenhum registro ainda')).toBeInTheDocument(), { timeout: 3000 });
+  });
+
+  test('mostra o resumo da acao e o dispositivo', async () => {
+    mockAuditoria({ entries: [entrada()] });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('Ligou')).toBeInTheDocument(), { timeout: 3000 });
+    expect(screen.getByText(/Lampada da Sala/)).toBeInTheDocument();
+  });
+
+  test('acao propria aparece como "Voce"', async () => {
+    mockAuditoria({ entries: [entrada({ actor_email: 'eduardo@test.com' })] });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText(/Voc[eê]/)).toBeInTheDocument(), { timeout: 3000 });
+  });
+
+  test('acao de convidado mostra o e-mail dele e o rotulo de convidado', async () => {
+    // Este e o caso que justifica a funcionalidade existir.
+    mockAuditoria({
+      entries: [entrada({ actor_email: 'convidado@test.com', details: { summary: 'Desligou' } })],
+    });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText(/convidado@test\.com/)).toBeInTheDocument(), { timeout: 3000 });
+    expect(screen.getByText(/convidado na sua casa/)).toBeInTheDocument();
+  });
+
+  test('acao em casa de terceiro identifica de quem e a casa', async () => {
+    mockAuditoria({
+      entries: [entrada({ home_owner_email: 'outro@test.com' })],
+    });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText(/na casa de outro@test\.com/)).toBeInTheDocument(), { timeout: 3000 });
+  });
+
+  test('resultado negado aparece com o rotulo correto e a justificativa', async () => {
+    mockAuditoria({
+      entries: [entrada({
+        result: 'denied',
+        error_message: 'Acesso negado: permissão apenas de visualização',
+      })],
+    });
+    await abrirAuditoria();
+
+    // ⚠️ A espera precisa ser por um texto EXCLUSIVO do registro.
+    // "Negado" nao serve: ele tambem e uma opcao do filtro de resultado,
+    // entao o waitFor terminaria de imediato, com a lista ainda em
+    // "Carregando registros..." — e o teste passaria sem ter verificado nada.
+    await waitFor(
+      () => expect(screen.getByText(/apenas de visualiza/i)).toBeInTheDocument(),
+      { timeout: 3000 }
+    );
+
+    // Agora sim o selo: "Negado" aparece duas vezes — na opcao do filtro e
+    // no selo do registro. Mais de uma ocorrencia confirma que o selo existe.
+    expect(screen.getAllByText('Negado').length).toBeGreaterThan(1);
+  });
+
+  test('resultado com falha aparece como Falhou', async () => {
+    mockAuditoria({ entries: [entrada({ result: 'error', error_message: 'Timeout na Tuya' })] });
+    await abrirAuditoria();
+    // Mesmo cuidado: espera pela mensagem de erro, que so existe no registro.
+    await waitFor(
+      () => expect(screen.getByText('Timeout na Tuya')).toBeInTheDocument(),
+      { timeout: 3000 }
+    );
+    expect(screen.getAllByText('Falhou').length).toBeGreaterThan(1);
+  });
+
+  test('mostra data e hora completas, nao tempo relativo', async () => {
+    // Em auditoria "ha 5 minutos" nao serve como evidencia.
+    mockAuditoria({ entries: [entrada()] });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText(/01\/09\/2026/)).toBeInTheDocument(), { timeout: 3000 });
+  });
+
+  test('exibe o IP de origem da acao', async () => {
+    mockAuditoria({ entries: [entrada()] });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('203.0.113.10')).toBeInTheDocument(), { timeout: 3000 });
+  });
+
+  test('filtro de resultado entra na consulta enviada ao backend', async () => {
+    mockAuditoria({ entries: [entrada()] });
+    await abrirAuditoria();
+    await waitFor(() => screen.getByText('Ligou'), { timeout: 3000 });
+
+    const selects = document.querySelectorAll('select');
+    await act(async () => {
+      fireEvent.change(selects[1], { target: { value: 'denied' } });
+    });
+
+    await waitFor(() => {
+      const chamou = axios.get.mock.calls.some(
+        ([url]) => url.includes('/audit-log?') && url.includes('result=denied')
+      );
+      expect(chamou).toBe(true);
+    }, { timeout: 3000 });
+  });
+
+  test('busca textual entra na consulta', async () => {
+    mockAuditoria({ entries: [entrada()] });
+    await abrirAuditoria();
+    await waitFor(() => screen.getByText('Ligou'), { timeout: 3000 });
+
+    const busca = screen.getByPlaceholderText(/Buscar dispositivo/i);
+    await act(async () => {
+      fireEvent.change(busca, { target: { value: 'portao' } });
+    });
+
+    await waitFor(() => {
+      const chamou = axios.get.mock.calls.some(
+        ([url]) => url.includes('/audit-log?') && url.includes('q=portao')
+      );
+      expect(chamou).toBe(true);
+    }, { timeout: 3000 });
+  });
+
+  test('filtro sem resultado explica que os filtros podem ser limpos', async () => {
+    mockAuditoria({ entries: [entrada()] });
+    await abrirAuditoria();
+    await waitFor(() => screen.getByText('Ligou'), { timeout: 3000 });
+
+    mockAuditoria({ entries: [] });
+    const busca = screen.getByPlaceholderText(/Buscar dispositivo/i);
+    await act(async () => {
+      fireEvent.change(busca, { target: { value: 'inexistente' } });
+    });
+
+    await waitFor(
+      () => expect(screen.getByText('Nenhum registro para esses filtros')).toBeInTheDocument(),
+      { timeout: 3000 }
+    );
+  });
+
+  test('paginacao aparece so quando ha mais registros que a pagina', async () => {
+    mockAuditoria({ entries: [entrada()], total: 120 });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('Próxima')).toBeInTheDocument(), { timeout: 3000 });
+    expect(screen.getByText('Anterior')).toBeInTheDocument();
+  });
+
+  test('paginacao nao aparece com poucos registros', async () => {
+    mockAuditoria({ entries: [entrada()], total: 1 });
+    await abrirAuditoria();
+    await waitFor(() => screen.getByText('Ligou'), { timeout: 3000 });
+    expect(screen.queryByText('Próxima')).not.toBeInTheDocument();
+  });
+
+  test('erro no backend nao quebra a tela', async () => {
+    axios.get = jest.fn().mockImplementation((url) => {
+      if (url.includes('/audit-log')) return Promise.reject(new Error('500'));
+      if (url.includes('/devices'))   return Promise.resolve({ data: { result: { list: [] } } });
+      return Promise.resolve({ data: [] });
+    });
+    await abrirAuditoria();
+    // Degrada para o estado vazio em vez de derrubar a aplicacao.
+    await waitFor(() => expect(screen.getByText('Nenhum registro ainda')).toBeInTheDocument(), { timeout: 3000 });
   });
 });

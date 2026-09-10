@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { supabase } from './supabase';
+import { auth, API } from './auth';
 import './App.css';
 
-const API = 'https://dudufritzs-projects-production.up.railway.app';
 
 // ── LOGO ─────────────────────────────────────────────────────
 // Logo completa para a tela de login
@@ -39,6 +38,7 @@ const Icons = {
   eyeOff:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
   help:        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5"/></svg>,
   download:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  audit:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="14" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>,
 };
 
 // ── ÍCONE DE DISPOSITIVO ──────────────────────────────────────
@@ -112,7 +112,7 @@ function Login() {
   const handleLogin = async e => {
     e.preventDefault();
     setLoading(true); setError(''); setSuccess('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await auth.signInWithPassword({ email, password });
     if (error) setError('E-mail ou senha incorretos.');
     setLoading(false);
   };
@@ -122,7 +122,7 @@ function Login() {
     setLoading(true); setError(''); setSuccess('');
     if (cpf.replace(/\D/g,'').length !== 11) { setError('CPF inválido.'); setLoading(false); return; }
     if (phone.replace(/\D/g,'').length < 10) { setError('Telefone inválido.'); setLoading(false); return; }
-    const { error } = await supabase.auth.signUp({
+    const { error } = await auth.signUp({
       email, password,
       options: { data: { full_name: fullName, phone: phone.replace(/\D/g,''), cpf: cpf.replace(/\D/g,'') } }
     });
@@ -134,7 +134,7 @@ function Login() {
   const handleForgot = async e => {
     e.preventDefault();
     setLoading(true); setError(''); setSuccess('');
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    const { error } = await auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
     if (error) setError(error.message);
     else setSuccess('E-mail de redefinição enviado! Verifique sua caixa de entrada.');
     setLoading(false);
@@ -200,6 +200,7 @@ function Sidebar({ page, setPage, user, onLogout, unreadAlerts = 0 }) {
     { id: 'alerts',      label: 'Alertas',       icon: Icons.alerts      },
     { id: 'cameras',     label: 'Câmeras',       icon: Icons.cameras     },
     { id: 'status',      label: 'Status',        icon: Icons.status      },
+    { id: 'audit',       label: 'Auditoria',     icon: Icons.audit       },
     { id: 'help',        label: 'Ajuda',         icon: Icons.help        },
     { id: 'downloads',   label: 'Downloads',     icon: Icons.download    },
     { id: 'settings',    label: 'Configurações', icon: Icons.settings    },
@@ -234,6 +235,7 @@ function BottomNav({ page, setPage, unreadAlerts = 0 }) {
     { id: 'devices',     label: 'Dispositivos', icon: Icons.devices     },
     { id: 'automations', label: 'Automação',    icon: Icons.automations },
     { id: 'alerts',      label: 'Alertas',      icon: Icons.alerts      },
+    { id: 'audit',       label: 'Auditoria',    icon: Icons.audit       },
     { id: 'help',        label: 'Ajuda',        icon: Icons.help        },
     { id: 'downloads',   label: 'Download',     icon: Icons.download    },
     { id: 'settings',    label: 'Config.',      icon: Icons.settings    },
@@ -646,7 +648,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: 'Meus dados estão seguros?',
-        a: 'Sim. O iHome usa autenticação segura via Supabase com tokens JWT. Suas credenciais Tuya são armazenadas com criptografia. Os dados trafegam sempre via HTTPS. Nunca compartilhamos suas informações com terceiros.',
+        a: 'Sim. Sua senha nunca é armazenada — guardamos apenas um hash irreversível (bcrypt). O acesso usa tokens de curta duração, renovados automaticamente. As credenciais da sua conta Tuya ficam cifradas com AES-256-GCM no banco, e todo o tráfego é por HTTPS. Nunca compartilhamos suas informações com terceiros.',
       },
     ],
   },
@@ -1405,6 +1407,202 @@ function Automations({ session, devices }) {
 }
 
 // ── ALERTAS ───────────────────────────────────────────────────
+// ── REGISTRO DE AUDITORIA ─────────────────────────────────────
+function AuditLog({ session }) {
+  const [entries, setEntries]   = useState([]);
+  const [total, setTotal]       = useState(0);
+  const [actors, setActors]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [offset, setOffset]     = useState(0);
+  const [filters, setFilters]   = useState({ actor: '', result: '', from: '', to: '', q: '' });
+  const PAGE = 50;
+  const headers = { Authorization: `Bearer ${session.access_token}` };
+  const myEmail = session?.user?.email;
+
+  // Monta a query string apenas com os filtros preenchidos
+  const buildParams = (off) => {
+    const p = new URLSearchParams({ limit: String(PAGE), offset: String(off) });
+    Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v); });
+    return p.toString();
+  };
+
+  const load = (off = 0) => {
+    setLoading(true);
+    axios.get(`${API}/audit-log?${buildParams(off)}`, { headers })
+      .then(r => {
+        setEntries(r.data.entries || []);
+        setTotal(r.data.total || 0);
+        setOffset(off);
+      })
+      .catch(() => { setEntries([]); setTotal(0); })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    axios.get(`${API}/audit-log/actors`, { headers })
+      .then(r => setActors(r.data || []))
+      .catch(() => {});
+  }, []); // eslint-disable-line
+
+  useEffect(() => {
+    const t = setTimeout(() => load(0), filters.q ? 350 : 0); // debounce só na busca
+    return () => clearTimeout(t);
+  }, [filters]); // eslint-disable-line
+
+  const resultConfig = {
+    success: { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'Executado' },
+    error:   { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Falhou'    },
+    denied:  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'Negado'    },
+  };
+
+  // Data e hora completas — em auditoria, "há 5 min" não serve como evidência
+  const formatStamp = ts => {
+    const d = new Date(ts);
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+  };
+
+  const clearFilters = () => setFilters({ actor: '', result: '', from: '', to: '', q: '' });
+  const hasFilters = Object.values(filters).some(Boolean);
+
+  const inputStyle = {
+    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 10, padding: '9px 12px', color: '#fff', fontSize: 13, outline: 'none',
+    fontFamily: 'inherit', minWidth: 0,
+  };
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <div className="page-title">Auditoria</div>
+          <div className="page-subtitle">
+            {total} registro{total !== 1 ? 's' : ''}
+            {hasFilters ? ' com os filtros aplicados' : ''}
+          </div>
+        </div>
+        {hasFilters && (
+          <button onClick={clearFilters} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 14px', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {/* ── FILTROS ── */}
+      <div className="card" style={{ marginBottom: 16, display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+        <input
+          style={inputStyle} placeholder="Buscar dispositivo, usuário, ação..."
+          value={filters.q}
+          onChange={e => setFilters(f => ({ ...f, q: e.target.value }))}
+        />
+        <select style={inputStyle} value={filters.actor} onChange={e => setFilters(f => ({ ...f, actor: e.target.value }))}>
+          <option value="">Todos os usuários</option>
+          {actors.map(a => <option key={a} value={a}>{a === myEmail ? `${a} (você)` : a}</option>)}
+        </select>
+        <select style={inputStyle} value={filters.result} onChange={e => setFilters(f => ({ ...f, result: e.target.value }))}>
+          <option value="">Todos os resultados</option>
+          <option value="success">Executado</option>
+          <option value="error">Falhou</option>
+          <option value="denied">Negado</option>
+        </select>
+        <input type="date" style={inputStyle} value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} title="De" />
+        <input type="date" style={inputStyle} value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} title="Até" />
+      </div>
+
+      {loading ? (
+        <div className="loading">Carregando registros...</div>
+      ) : entries.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ margin: '0 auto 16px', opacity: 0.25, lineHeight: 0, width: 44 }}>{Icons.audit}</div>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 8 }}>
+            {hasFilters ? 'Nenhum registro para esses filtros' : 'Nenhum registro ainda'}
+          </div>
+          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>
+            {hasFilters
+              ? 'Ajuste ou limpe os filtros para ver mais.'
+              : 'Toda ação em dispositivos passa a ser registrada aqui com autor, horário e resultado.'}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {entries.map(e => {
+              const cfg = resultConfig[e.result] || resultConfig.success;
+              const summary = e.details?.summary || 'Comando enviado';
+              const isMe = e.actor_email === myEmail;
+              const inMyHome = e.home_owner_email === myEmail;
+              return (
+                <div className="card" key={e.id} style={{ padding: 14, borderLeft: `3px solid ${cfg.color}` }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                        <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>
+                          {summary}
+                        </span>
+                        {e.device_name && (
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                            &middot; {e.device_name}
+                          </span>
+                        )}
+                        <span style={{ background: cfg.bg, color: cfg.color, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 7px', letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12.5 }}>
+                        {isMe ? 'Você' : e.actor_email}
+                        {!inMyHome && <> &middot; na casa de {e.home_owner_email}</>}
+                        {inMyHome && !isMe && <> &middot; convidado na sua casa</>}
+                      </div>
+                      {e.error_message && (
+                        <div style={{ color: cfg.color, fontSize: 12, marginTop: 5 }}>
+                          {e.error_message}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>
+                        {formatStamp(e.created_at)}
+                      </div>
+                      {e.ip_address && (
+                        <div style={{ color: 'rgba(255,255,255,0.22)', fontSize: 11, marginTop: 3 }}>
+                          {e.ip_address}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── PAGINAÇÃO ── */}
+          {total > PAGE && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 18 }}>
+              <button
+                onClick={() => load(Math.max(offset - PAGE, 0))}
+                disabled={offset === 0}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 14px', color: offset === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', fontSize: 12, cursor: offset === 0 ? 'default' : 'pointer' }}>
+                Anterior
+              </button>
+              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>
+                {offset + 1}–{Math.min(offset + PAGE, total)} de {total}
+              </span>
+              <button
+                onClick={() => load(offset + PAGE)}
+                disabled={offset + PAGE >= total}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 14px', color: offset + PAGE >= total ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', fontSize: 12, cursor: offset + PAGE >= total ? 'default' : 'pointer' }}>
+                Próxima
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function Alerts({ session }) {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1840,10 +2038,10 @@ export default function App() {
   const [inviteToast, setInviteToast] = useState(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    auth.getSession().then(({ data: { session } }) => {
       setSession(session); setAuthLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session));
+    const { data: { subscription } } = auth.onAuthStateChange((_e, session) => setSession(session));
     // Verifica parâmetro ?invite= na URL (vindo do e-mail de convite)
     const params = new URLSearchParams(window.location.search);
     const invite = params.get('invite');
@@ -1897,7 +2095,7 @@ export default function App() {
     } catch(e) { console.error(e); }
   };
 
-  const handleLogout = () => supabase.auth.signOut();
+  const handleLogout = () => auth.signOut();
 
   if (authLoading) return (
     <div style={{ background: '#0B0F19', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
@@ -1927,6 +2125,7 @@ export default function App() {
         {page==='alerts'      && <Alerts session={session} />}
         {page==='cameras'     && <Cameras devices={devices} />}
         {page==='status'      && <Status   devices={devices} />}
+        {page==='audit'       && <AuditLog session={session} />}
         {page==='help'        && <Help />}
         {page==='downloads'   && <Downloads session={session} devices={devices} />}
         {page==='settings'    && <Settings session={session} onLogout={handleLogout} />}

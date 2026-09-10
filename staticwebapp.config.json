@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/staticwebapp.config.json",
+
+  "//": "SPA fallback — o React Router resolve as rotas no navegador, então",
+  "//2": "qualquer caminho que não seja um arquivo real precisa devolver o",
+  "//3": "index.html. Sem isto, dar F5 em /auditoria retornaria 404 do servidor.",
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/static/*", "*.{png,jpg,jpeg,svg,ico,webmanifest,json,js,css,txt}"]
+  },
+
+  "//4": "Cabeçalhos de segurança aplicados a todas as respostas.",
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+  },
+
+  "//5": "O Service Worker precisa ser revalidado sempre, senão o navegador",
+  "//6": "serve a versão antiga do app indefinidamente após um deploy.",
+  "routes": [
+    {
+      "route": "/service-worker.js",
+      "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
+    },
+    {
+      "route": "/static/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    }
+  ],
+
+  "mimeTypes": {
+    ".json": "application/json",
+    ".webmanifest": "application/manifest+json"
+  }
+}

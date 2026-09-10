@@ -1,3 +1,13 @@
+# ═══════════════════════════════════════════════════════════════════
+#  CI/CD — iHome Frontend
+#
+#  test    → roda sempre. Portão de qualidade.
+#  deploy  → só na main, e só se o teste passar (needs: test).
+#
+#  A imagem publicada traz o build do React servido pelo Caddy, que roda
+#  na VM de produção. O fallback de SPA (qualquer rota desconhecida cai no
+#  index.html) fica no Caddyfile.
+# ═══════════════════════════════════════════════════════════════════
 name: CI/CD Frontend
 
 on:
@@ -6,14 +16,24 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+
 jobs:
+  # ─────────────────────────────────────────────────────────────────
+  #  1. TESTES E ANÁLISE ESTÁTICA
+  # ─────────────────────────────────────────────────────────────────
   test:
     name: Testes e Cobertura
     runs-on: ubuntu-latest
 
     env:
-      REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
       CI: true
+      REACT_APP_API_URL: http://localhost:3001   # valor de teste; o axios é mockado
 
     steps:
       - name: Checkout
@@ -24,26 +44,94 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Instalar dependências
         run: npm ci
 
       - name: Rodar testes com cobertura
-        run: npm test -- --coverage --watchAll=false --forceExit
+        run: npm test -- --coverage --watchAll=false
 
+      # A linha de Web Apps exige 25% no frontend. O portão fica aqui para
+      # a queda aparecer no pull request, e não na prova de autoria.
+      - name: Verificar cobertura mínima de 25%
+        run: |
+          COBERTURA=$(node -p "require('./coverage/coverage-summary.json').total.statements.pct")
+          echo "Cobertura de statements: ${COBERTURA}%"
+          node -e "process.exit(${COBERTURA} >= 25 ? 0 : 1)" || {
+            echo "::error::Cobertura ${COBERTURA}% abaixo do mínimo de 25% exigido para Web Apps."
+            exit 1
+          }
+
+      # A análise não bloqueia o pipeline: se o SONAR_TOKEN ainda não foi
+      # configurado, o passo é pulado em vez de reprovar o build inteiro.
+      # Os testes e o portão de cobertura, esses sim, continuam obrigatórios.
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        uses: SonarSource/sonarqube-scan-action@v4
 
-      - name: Upload cobertura
+      - name: Publicar relatório de cobertura
         uses: actions/upload-artifact@v4
         with:
           name: coverage-frontend
           path: coverage/
+          retention-days: 30
 
-      - name: Build de produção
-        run: npm run build
+  # ─────────────────────────────────────────────────────────────────
+  #  2. PUBLICAÇÃO DA IMAGEM
+  #
+  #  A imagem contém o build do React E o Caddy que o serve. Empacotar os
+  #  dois juntos é o que permite atualizar o site sem copiar arquivo para
+  #  a VM — o que seria deploy por SSH, vedado pela disciplina.
+  # ─────────────────────────────────────────────────────────────────
+  publicar:
+    name: Publicar imagem no GHCR
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build e push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # /api é caminho relativo: o Caddy serve frontend e API no mesmo
+          # domínio, então não há URL de backend embutida na imagem — a
+          # mesma imagem funciona em qualquer domínio.
+          build-args: |
+            REACT_APP_API_URL=/api
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ihome-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/ihome-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Resumo
+        run: |
+          echo "### Imagem publicada" >> $GITHUB_STEP_SUMMARY
+          echo '`ghcr.io/${{ github.repository_owner }}/ihome-frontend:${{ github.sha }}`' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "A VM detecta e aplica em até 2 minutos." >> $GITHUB_STEP_SUMMARY

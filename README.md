@@ -1,70 +1,109 @@
-# Getting Started with Create React App
+# iHome — Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Progressive Web App do iHome, sistema de automação residencial. Instala no celular direto pelo navegador, funciona offline e controla dispositivos Tuya IoT por toque ou por comando em português.
 
-## Available Scripts
+**Autor:** Eduardo Fritz · eduardosolifritz@gmail.com
+**Instituição:** Centro Universitário Católica de Santa Catarina — Engenharia de Software
+**Disciplina:** Portfólio · 2026/2
 
-In the project directory, you can run:
+| | |
+|---|---|
+| **Backend** | [ihome-backend](https://github.com/dudufritz/ihome-backend) |
+| **Documentação** | [Wiki](../../wiki) |
+| **Stack** | React 18 · Create React App · PWA · Azure Static Web Apps |
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Como rodar
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+git clone https://github.com/dudufritz/ihome-frontend.git
+cd ihome-frontend
+npm install
 
-### `npm test`
+cp .env.example .env.local     # REACT_APP_API_URL=http://localhost:3001
+npm start                      # http://localhost:3000
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Requer o [backend](https://github.com/dudufritz/ihome-backend) rodando.
 
-### `npm run build`
+### Testes
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+npm test                       # 49 testes, cobertura mínima exigida: 25%
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Estrutura
 
-### `npm run eject`
+```
+src/
+├── App.js        Componentes da aplicação e telas
+├── App.test.js   Suíte de testes
+├── auth.js       Cliente de autenticação: sessão, renovação de token, chamadas /auth
+├── App.css       Estilos
+└── index.js      Ponto de entrada do React
+public/
+├── manifest.json      Manifesto do PWA — é o que permite instalar no celular
+├── service-worker.js  Cache offline
+└── logo.png           Identidade visual
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Telas
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+| Tela | O que faz |
+|---|---|
+| **Visão Geral** | Painel com contadores, dispositivos recentes e últimos alertas |
+| **Dispositivos** | Lista com estado em tempo real e controle por toque |
+| **Automação** | Rotinas agendadas por horário |
+| **Alertas** | Histórico de quedas e retornos de conexão |
+| **Câmeras** | Dispositivos de vídeo |
+| **Status** | Indicadores de disponibilidade |
+| **Auditoria** | Quem fez o quê e quando, com filtros por usuário, resultado e período |
+| **Configurações** | Credenciais Tuya, compartilhamento de casa e notificações |
+| **Assistente** | Campo flutuante para comandos em linguagem natural |
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## Decisões técnicas
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+**PWA em vez de app nativo.** Instala pelo navegador, sem loja de aplicativos, e a mesma base de código atende celular e desktop. Para um sistema cuja função é acionar dispositivos remotos, a diferença prática em relação a um app nativo é irrelevante — e o custo de manutenção de duas plataformas nativas, não.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+**Sessão renovada por interceptor.** O access token dura 15 minutos. Quando expira, o backend responde 401 com `code: 'token_expired'`; um interceptor do axios em `auth.js` troca o refresh por um par novo e refaz a requisição original. Nenhum componente precisa saber que o token expira.
 
-### Code Splitting
+Há uma trava para renovações concorrentes: se várias requisições falharem ao mesmo tempo, todas aguardam a mesma renovação. Sem isso, o backend interpretaria as chamadas simultâneas como reuso de refresh token — que é o sinal de roubo — e derrubaria a sessão do usuário.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+**Tokens em localStorage.** Compromisso assumido: é legível por JavaScript, então um XSS os alcançaria. A alternativa mais segura seriam cookies `httpOnly`, que exigiriam CORS com credenciais e proteção contra CSRF. Optamos por localStorage e mitigamos o XSS na origem — o React escapa todo conteúdo por padrão e o projeto não usa `dangerouslySetInnerHTML` em lugar nenhum.
 
-### Analyzing the Bundle Size
+**`auth.js` mantém a superfície de um cliente de identidade.** Os métodos (`signInWithPassword`, `signUp`, `getSession`, `onAuthStateChange`) seguem uma convenção conhecida. Foi o que permitiu trocar o provedor de autenticação alterando 6 linhas do `App.js` e nenhuma da tela de login.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
+## Variáveis de ambiente
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `REACT_APP_API_URL` | sim, em produção | URL base da API |
 
-### Advanced Configuration
+> ⚠️ No Create React App as variáveis `REACT_APP_*` são substituídas no código **durante o build**, não lidas em tempo de execução. Se faltar no build de produção, o site publicado tentará falar com `localhost:3001`. O workflow de CI falha de propósito quando o secret está ausente, em vez de publicar um site quebrado.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+## Qualidade
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+| | |
+|---|---|
+| Testes | 49, com Jest e React Testing Library |
+| Análise estática | SonarCloud, executado a cada push |
+| CI/CD | GitHub Actions — testes, portão de cobertura, build e deploy no Static Web Apps |
 
-### `npm run build` fails to minify
+O job de deploy só executa se o de testes passar, e o pipeline falha se a cobertura cair abaixo de 25%.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+## Licença
+
+Projeto acadêmico desenvolvido para a disciplina de Portfólio do Centro Universitário Católica de Santa Catarina.

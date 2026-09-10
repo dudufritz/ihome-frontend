@@ -13,6 +13,12 @@
 
 # misc
 .DS_Store
+
+# Variaveis de ambiente.
+# O template padrao do Create React App ignora apenas os .env.*.local
+# e deixa o .env de fora, o que permitiria commitar segredos sem querer.
+# Aqui o .env tambem e ignorado; o que fica versionado e o .env.example.
+.env
 .env.local
 .env.development.local
 .env.test.local
