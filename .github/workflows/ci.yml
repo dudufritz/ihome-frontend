@@ -34,6 +34,12 @@ jobs:
     env:
       CI: true
       REACT_APP_API_URL: http://localhost:3001   # valor de teste; o axios é mockado
+      # Trazido para `env` de propósito. O contexto `secrets` não existe
+      # dentro de um `if:` — o GitHub recusa o arquivo inteiro se aparecer
+      # ali. Copiando o valor para uma variável de ambiente, o passo abaixo
+      # consegue testar se o token existe usando o contexto `env`, que é
+      # permitido em condições.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Checkout
@@ -68,11 +74,10 @@ jobs:
       # configurado, o passo é pulado em vez de reprovar o build inteiro.
       # Os testes e o portão de cobertura, esses sim, continuam obrigatórios.
       - name: SonarCloud Scan
-        if: ${{ secrets.SONAR_TOKEN != '' }}
+        if: env.SONAR_TOKEN != ''
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         uses: SonarSource/sonarqube-scan-action@v4
 
       - name: Publicar relatório de cobertura
