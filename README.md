@@ -39,16 +39,35 @@ npm test                       # 49 testes, cobertura mínima exigida: 25%
 
 ```
 src/
-├── App.js        Componentes da aplicação e telas
-├── App.test.js   Suíte de testes
-├── auth.js       Cliente de autenticação: sessão, renovação de token, chamadas /auth
-├── App.css       Estilos
-└── index.js      Ponto de entrada do React
+├── App.js          Composição: sessão, navegação e as telas ainda não extraídas
+├── App.test.js     Suíte de testes
+├── auth.js         Cliente de autenticação: sessão, renovação de token, chamadas /auth
+├── App.css         Estilos
+├── index.js        Ponto de entrada do React
+├── components/     Peças reutilizadas por mais de uma tela
+│   ├── Icons.js          Conjunto de ícones SVG
+│   ├── DeviceIcon.js     Escolhe o ícone pela categoria do dispositivo
+│   ├── PasswordField.js  Campo de senha com o botão de revelar
+│   └── Toggle.js         Interruptor de ligar e desligar
+├── pages/          Uma tela inteira por arquivo
+│   ├── Devices.js        Dispositivos: filtro por cômodo e acionamento
+│   ├── AuditLog.js       Auditoria: filtros, busca e paginação
+│   └── Settings.js       Credenciais, compartilhamento e notificações
+└── utils/
+    └── push.js     Conversão da chave VAPID para o formato do PushManager
 public/
 ├── manifest.json      Manifesto do PWA — é o que permite instalar no celular
 ├── service-worker.js  Cache offline
 └── logo.png           Identidade visual
 ```
+
+**A regra da divisão:** tela inteira vai em `pages/`, peça usada por mais de uma
+tela vai em `components/`. O `App.js` guarda o que é composição — sessão,
+navegação, estado compartilhado — e as telas que ainda não foram extraídas.
+
+O arquivo tinha 2.138 linhas e 22 componentes. A separação começou por um code
+review externo, que apontou o problema antes que ele piorasse, e revelou de
+quebra uma variável morta que reprovava o build de produção.
 
 ---
 
