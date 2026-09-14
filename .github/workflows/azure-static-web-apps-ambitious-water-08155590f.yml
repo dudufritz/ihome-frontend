@@ -35,6 +35,22 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          # O Create React App substitui `process.env.REACT_APP_*` durante a
+          # COMPILAÇÃO, não em execução: o valor vira texto literal dentro do
+          # bundle. Definir a variável aqui é a única forma de ela chegar ao
+          # arquivo que o navegador baixa.
+          #
+          # Sem esta linha, o `auth.js` cai no valor de reserva
+          # (`http://localhost:3001`) e cada visitante tenta falar com a própria
+          # máquina — o login aparece, o botão não faz nada. Foi exatamente o
+          # que aconteceu na primeira publicação.
+          #
+          # A URL não é segredo: ela fica visível no bundle de qualquer forma,
+          # porque é o endereço que o navegador precisa chamar. Por isso vai
+          # aqui, versionada e legível, em vez de num secret — um secret daria
+          # a falsa impressão de que há algo a esconder.
+          REACT_APP_API_URL: https://ihome-app-ffa2cgh4ghbecwda.westcentralus-01.azurewebsites.net
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_WATER_08155590F }}
           action: "upload"
