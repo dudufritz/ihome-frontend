@@ -263,14 +263,34 @@ function Settings({ session, onLogout }) {
             <label>Access Secret {configured && <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>(deixe em branco para manter)</span>}</label>
             <PasswordField value={accessSecret} onChange={e => setAccessSecret(e.target.value)} placeholder={configured ? '(não alterado)' : 'Seu Access Secret'} />
           </div>
+          {/*
+            A Tuya mantém SEIS centros de dados, e o Access ID só existe dentro
+            daquele onde o projeto foi criado. Perguntar no servidor errado
+            devolve `code: 2009 — clientId is invalid`, que parece credencial
+            inválida e não é: é endereço errado.
+
+            A lista tinha só quatro opções. Quem criasse o projeto em Eastern
+            America ou Western Europe não conseguia acertar de jeito nenhum —
+            o app não oferecia o servidor certo.
+
+            Os nomes seguem exatamente os do painel da Tuya (Data Center), para
+            a pessoa poder comparar palavra por palavra em vez de adivinhar
+            qual "Américas" corresponde a qual.
+          */}
           <div className="login-field" style={{ marginBottom: 16 }}>
             <label>Região do servidor</label>
             <select value={baseUrl} onChange={e => setBaseUrl(e.target.value)} className="styled-select">
-              <option value="https://openapi.tuyaus.com">Américas (EUA)</option>
-              <option value="https://openapi.tuyaeu.com">Europa</option>
-              <option value="https://openapi.tuyacn.com">Ásia (China)</option>
-              <option value="https://openapi.tuyain.com">Índia</option>
+              <option value="https://openapi.tuyaus.com">Western America (Américas — o mais comum no Brasil)</option>
+              <option value="https://openapi-ueaz.tuyaus.com">Eastern America</option>
+              <option value="https://openapi.tuyaeu.com">Central Europe</option>
+              <option value="https://openapi-weaz.tuyaeu.com">Western Europe</option>
+              <option value="https://openapi.tuyacn.com">China</option>
+              <option value="https://openapi.tuyain.com">India</option>
             </select>
+            <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.35)', marginTop: 6, lineHeight: 1.5 }}>
+              Precisa ser o mesmo <strong>Data Center</strong> que aparece em
+              platform.tuya.com → Cloud → Development → seu projeto → Overview.
+            </div>
           </div>
           <button type="submit" className="login-btn" disabled={loading}>
             {loading ? 'Salvando...' : configured ? 'Atualizar Credenciais' : 'Salvar Credenciais'}
