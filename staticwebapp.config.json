@@ -10,11 +10,16 @@
   },
 
   "//4": "Cabeçalhos de segurança aplicados a todas as respostas.",
+  "//5": "microphone=(self): o assistente por voz usa SpeechRecognition, que o",
+  "//6": "navegador recusa quando a política nega o microfone. Negar tudo por",
+  "//7": "padrão é a postura certa, mas negar o que o próprio app precisa é",
+  "//8": "apenas quebrar a funcionalidade. (self) libera só esta origem —",
+  "//9": "um iframe de terceiro continua sem acesso.",
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+    "Permissions-Policy": "geolocation=(), microphone=(self), camera=()",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
   },
 

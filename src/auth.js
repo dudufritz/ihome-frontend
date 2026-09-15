@@ -34,7 +34,35 @@
  */
 import axios from 'axios';
 
+/**
+ * Endereço da API.
+ *
+ * O Create React App substitui `process.env.REACT_APP_*` em tempo de
+ * compilação: o valor vira texto literal dentro do bundle. Quem define isso é
+ * o workflow de deploy, não o servidor — mudar a variável depois de publicado
+ * não tem efeito nenhum.
+ *
+ * O valor de reserva serve ao desenvolvimento local, onde a API sobe em 3001.
+ */
 export const API = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+/**
+ * Um build de produção que caia no valor de reserva está quebrado: aponta para
+ * a máquina de quem abriu o site, e nenhuma chamada chega ao servidor. O sintoma
+ * é cruel — a tela de login aparece normalmente e o botão simplesmente não faz
+ * nada, sem erro visível.
+ *
+ * Já aconteceu uma vez, e demorou a ser notado justamente por ser silencioso.
+ * Este aviso existe para que a próxima vez apareça no console em vez de virar
+ * um "o app não está funcionando" sem explicação.
+ */
+if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
+  console.error(
+    '❌ REACT_APP_API_URL não foi definida durante o build. ' +
+    'A aplicação está tentando falar com ' + API + ', que é a máquina de quem ' +
+    'abriu o site. Defina a variável no workflow de deploy e publique de novo.'
+  );
+}
 
 const CHAVE_SESSAO = 'ihome.session';
 
