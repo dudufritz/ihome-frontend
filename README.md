@@ -39,19 +39,33 @@ npm test                       # 49 testes, cobertura mínima exigida: 25%
 
 ```
 src/
-├── App.js          Composição: sessão, navegação e as telas ainda não extraídas
+├── App.js          Composição: sessão, navegação e estado compartilhado
 ├── App.test.js     Suíte de testes
 ├── auth.js         Cliente de autenticação: sessão, renovação de token, chamadas /auth
 ├── App.css         Estilos
 ├── index.js        Ponto de entrada do React
 ├── components/     Peças reutilizadas por mais de uma tela
-│   ├── Icons.js          Conjunto de ícones SVG
-│   ├── DeviceIcon.js     Escolhe o ícone pela categoria do dispositivo
-│   ├── PasswordField.js  Campo de senha com o botão de revelar
-│   └── Toggle.js         Interruptor de ligar e desligar
+│   ├── Icons.js             Conjunto de ícones SVG
+│   ├── DeviceIcon.js        Escolhe o ícone pela categoria do dispositivo
+│   ├── PasswordField.js     Campo de senha com o botão de revelar
+│   ├── Toggle.js            Interruptor de ligar e desligar
+│   ├── LoginLogo.js         Logo completa da tela de login
+│   ├── SidebarLogo.js       Logo reduzida da barra lateral
+│   ├── IHomeBubbleIcon.js   Ícone do botão flutuante
+│   ├── Sidebar.js           Navegação lateral do desktop
+│   ├── BottomNav.js         Navegação inferior do celular
+│   └── FloatingAssistant.js Assistente por texto e voz
 ├── pages/          Uma tela inteira por arquivo
+│   ├── Login.js          Entrar, criar conta e recuperar senha
+│   ├── Dashboard.js      Visão geral e alertas recentes
 │   ├── Devices.js        Dispositivos: filtro por cômodo e acionamento
+│   ├── Automations.js    Rotinas por horário
+│   ├── Alerts.js         Dispositivos que saíram ou voltaram do ar
+│   ├── Cameras.js        Câmeras da casa
+│   ├── Status.js         Indicadores de saúde da casa
 │   ├── AuditLog.js       Auditoria: filtros, busca e paginação
+│   ├── Downloads.js      Instalação do PWA e exportação
+│   ├── Help.js           Perguntas frequentes
 │   └── Settings.js       Credenciais, compartilhamento e notificações
 └── utils/
     └── push.js     Conversão da chave VAPID para o formato do PushManager
@@ -62,12 +76,13 @@ public/
 ```
 
 **A regra da divisão:** tela inteira vai em `pages/`, peça usada por mais de uma
-tela vai em `components/`. O `App.js` guarda o que é composição — sessão,
-navegação, estado compartilhado — e as telas que ainda não foram extraídas.
+tela vai em `components/`. O `App.js` guarda só o que é composição — sessão,
+navegação e o estado que as telas compartilham.
 
-O arquivo tinha 2.138 linhas e 22 componentes. A separação começou por um code
-review externo, que apontou o problema antes que ele piorasse, e revelou de
-quebra uma variável morta que reprovava o build de produção.
+O arquivo tinha **2.138 linhas e 22 componentes**; hoje tem 130 e nenhuma tela.
+A separação começou por um code review externo, que apontou o problema antes que
+ele piorasse, e revelou de quebra uma variável morta que reprovava o build de
+produção — invisível num arquivo de duas mil linhas, óbvia num de quinhentas.
 
 ---
 
