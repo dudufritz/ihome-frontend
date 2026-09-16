@@ -37,8 +37,16 @@ function FloatingAssistant({ session }) {
       const r = await axios.post(`${API}/ai-command`, { command: text }, { headers });
       setMessages(prev => [...prev, { role: 'assistant', text: r.data.message || r.data.error }]);
       axios.get(`${API}/schedules`, { headers }).then(r => setSchedules(r.data)).catch(() => {});
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Não consegui processar o comando. Tente novamente.' }]);
+    } catch (err) {
+      // O backend já devolve o motivo em err.response.data.error — chave
+      // inválida, modelo indisponível, cota estourada. Substituí-lo por
+      // "tente novamente" transformava uma causa identificável num mistério:
+      // repetir o comando não resolveria nenhum desses casos.
+      const motivo = err.response?.data?.error;
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: motivo || 'Não consegui falar com o servidor. Verifique sua conexão.',
+      }]);
     }
     setLoading(false);
   };
