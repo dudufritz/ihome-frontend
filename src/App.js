@@ -112,7 +112,7 @@ export default function App() {
       <Sidebar page={page} setPage={setPage} user={session.user} onLogout={handleLogout} unreadAlerts={unreadAlerts} />
       <div className="main">
         {page==='dashboard'   && <Dashboard    devices={devices} setPage={setPage} session={session} />}
-        {page==='devices'     && <Devices      devices={devices} loading={loading} onToggle={handleToggle} tuyaConfigured={tuyaConfigured} setPage={setPage} />}
+        {page==='devices'     && <Devices      devices={devices} loading={loading} onToggle={handleToggle} tuyaConfigured={tuyaConfigured} setPage={setPage} session={session} onChanged={() => fetchDevices(session.access_token)} />}
         {page==='automations' && <Automations session={session} devices={devices} />}
         {page==='alerts'      && <Alerts session={session} />}
         {page==='cameras'     && <Cameras devices={devices} />}

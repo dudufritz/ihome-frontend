@@ -6,9 +6,14 @@
 import React, { useState } from 'react';
 import DeviceIcon from '../components/DeviceIcon';
 import Toggle from '../components/Toggle';
+import DeviceDetail from '../components/DeviceDetail';
 
 // ── DISPOSITIVOS ──────────────────────────────────────────────
-function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
+function Devices({ devices, loading, onToggle, tuyaConfigured, setPage, session, onChanged }) {
+  // Guardamos o id, não o objeto: a lista se atualiza a cada 30 segundos, e
+  // guardar uma cópia congelaria a tela aberta no estado de quando abriu.
+  const [abertoId, setAbertoId] = useState(null);
+  const aberto = devices.find(d => d.id === abertoId) || null;
   const [filter, setFilter] = useState('Todos');
   const tabs = ['Todos','Sala','Quarto','Cozinha','Externa'];
   const filtered = filter === 'Todos'
@@ -113,21 +118,44 @@ function Devices({ devices, loading, onToggle, tuyaConfigured, setPage }) {
         {filtered.map(d => {
           const on = d.isControllable ? d.switch_1 === true : d.online === true;
           const color = on ? '#3B7EFF' : 'rgba(255,255,255,0.15)';
+          // Um sensor não liga nem desliga: ele informa. Dizer "Ligado" para
+          // um sensor de presença online sugere um estado que ele não tem —
+          // e a pessoa fica esperando um botão que não existe.
+          const rotulo = d.isControllable
+            ? (on ? 'Ligado' : 'Desligado')
+            : (d.online ? 'Online' : 'Offline');
           return (
-            <div className="device-card" key={d.id}>
+            <div className="device-card" key={d.id}
+              onClick={() => setAbertoId(d.id)}
+              style={{ cursor: 'pointer' }}>
               <div className="dev-icon-wrap" style={{ background: on ? 'rgba(59,126,255,0.15)' : 'rgba(255,255,255,0.04)' }}>
                 <DeviceIcon category={d.category_name} size={20} color={color} />
               </div>
               <div className="dev-name">{d.name}</div>
-              <div className="dev-category">{d.room || d.category_name}</div>
+              <div className="dev-category">{d.room || d.category_name || 'Sem cômodo'}</div>
               <div className="dev-footer">
-                <span className={`status-badge ${on?'on':'off'}`}>{on?'Ligado':'Desligado'}</span>
-                {d.isControllable && <Toggle on={on} onClick={() => onToggle(d.id, on)} />}
+                <span className={`status-badge ${on?'on':'off'}`}>{rotulo}</span>
+                {d.isControllable && (
+                  <span onClick={e => e.stopPropagation()}>
+                    <Toggle on={on} onClick={() => onToggle(d.id, on)} />
+                  </span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {aberto && (
+        <DeviceDetail
+          device={aberto}
+          session={session}
+          onClose={() => setAbertoId(null)}
+          onToggle={onToggle}
+          onChanged={onChanged}
+          setPage={setPage}
+        />
+      )}
     </div>
   );
 }
