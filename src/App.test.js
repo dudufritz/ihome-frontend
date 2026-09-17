@@ -620,3 +620,172 @@ describe('Auditoria — tela', () => {
     await waitFor(() => expect(screen.getByText('Nenhum registro ainda')).toBeInTheDocument(), { timeout: 3000 });
   });
 });
+
+// ── TELA DE STATUS ────────────────────────────────────────────
+// Esta tela ja exibiu notas fixas no codigo (Seguranca 90, Energia 85,
+// Ambiente 90) com o rotulo "Excelente" sempre. Os testes abaixo existem
+// para impedir que isso volte: cada nota precisa vir de um dado real, e
+// dado que nao existe precisa aparecer como "sem dado", nunca como zero
+// nem como numero inventado.
+
+/** Dispositivo com os campos que a tela de Status le. */
+function aparelho(overrides = {}) {
+  return { id: 'd1', name: 'Luz', online: true, room: 'Sala', isControllable: true, ...overrides };
+}
+
+/** Monta os mocks das tres chamadas que alimentam a tela. */
+function mockStatus({ devices = [], alerts = [], schedules = [] } = {}) {
+  axios.get = jest.fn().mockImplementation((url) => {
+    if (url.includes('/devices'))   return Promise.resolve({ data: { result: { list: devices } } });
+    if (url.includes('/alerts'))    return Promise.resolve({ data: alerts });
+    if (url.includes('/schedules')) return Promise.resolve({ data: schedules });
+    return Promise.resolve({ data: {} });
+  });
+}
+
+/** Renderiza o app logado e navega ate a aba Status. */
+async function abrirStatus() {
+  render(<App />);
+  await waitFor(() => screen.getAllByText('Status').length > 0, { timeout: 3000 });
+  await act(async () => { fireEvent.click(screen.getAllByText('Status')[0]); });
+  await waitFor(() => screen.getByText('Status da Instalação'), { timeout: 3000 });
+}
+
+/** Data ISO de N dias atras — usada para posicionar alertas dentro/fora da janela. */
+const diasAtras = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+
+describe('Status — indicadores vem de dados reais', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupSessionMocks();
+  });
+
+  test('conectividade reflete a proporcao de dispositivos online', async () => {
+    mockStatus({ devices: [
+      aparelho({ id: 'a', online: true }),
+      aparelho({ id: 'b', online: true }),
+      aparelho({ id: 'c', online: false }),
+      aparelho({ id: 'd', online: false }),
+    ]});
+    await abrirStatus();
+    expect(screen.getByText('2 de 4 dispositivos respondendo agora')).toBeInTheDocument();
+    expect(screen.getAllByText('50/100').length).toBeGreaterThan(0);
+  });
+
+  test('organizacao conta dispositivos com comodo definido', async () => {
+    // Cobre o pedido do demandante: o comodo passou a ser informacao de
+    // primeira classe, entao a tela mede quanto da casa esta mapeada.
+    mockStatus({ devices: [
+      aparelho({ id: 'a', room: 'Sala' }),
+      aparelho({ id: 'b', room: '   ' }),   // espaco em branco nao conta
+      aparelho({ id: 'c', room: null }),
+      aparelho({ id: 'd', room: 'Quarto' }),
+    ]});
+    await abrirStatus();
+    expect(screen.getByText('2 de 4 dispositivos com cômodo definido')).toBeInTheDocument();
+  });
+
+  test('estabilidade so conta quedas dentro da janela de 7 dias', async () => {
+    mockStatus({
+      devices: [aparelho()],
+      alerts: [
+        { id: 1, type: 'offline', created_at: diasAtras(1) },
+        { id: 2, type: 'offline', created_at: diasAtras(3) },
+        { id: 3, type: 'offline', created_at: diasAtras(40) },  // fora da janela
+        { id: 4, type: 'online',  created_at: diasAtras(1) },   // retorno nao e queda
+      ],
+    });
+    await abrirStatus();
+    expect(screen.getByText('2 quedas nos últimos 7 dias')).toBeInTheDocument();
+    expect(screen.getAllByText('80/100').length).toBeGreaterThan(0);  // 100 - 2*10
+  });
+
+  test('estabilidade nao fica negativa com muitas quedas', async () => {
+    const muitas = Array.from({ length: 15 }, (_, i) => ({
+      id: i, type: 'offline', created_at: diasAtras(1),
+    }));
+    mockStatus({ devices: [aparelho()], alerts: muitas });
+    await abrirStatus();
+    expect(screen.getAllByText('0/100').length).toBeGreaterThan(0);
+  });
+
+  test('automacao ignora sensores no denominador', async () => {
+    // Sensor nao aceita comando, entao nao pode ter rotina. Conta-lo
+    // puniria a instalacao por uma limitacao do aparelho.
+    mockStatus({
+      devices: [
+        aparelho({ id: 'lamp', isControllable: true }),
+        aparelho({ id: 'tomada', isControllable: true }),
+        aparelho({ id: 'sensor', isControllable: false }),
+      ],
+      schedules: [{ id: 1, device_id: 'lamp', active: true }],
+    });
+    await abrirStatus();
+    expect(screen.getByText(/1 de 2 dispositivos controláveis com rotina ativa/)).toBeInTheDocument();
+  });
+
+  test('sem dispositivos controlaveis, automacao diz que nao ha como medir', async () => {
+    mockStatus({ devices: [aparelho({ id: 's', isControllable: false })] });
+    await abrirStatus();
+    expect(screen.getByText('Nenhum dispositivo aceita comando')).toBeInTheDocument();
+    expect(screen.getAllByText('sem dado').length).toBeGreaterThan(0);
+  });
+
+  test('indicador sem dado nao entra na media', async () => {
+    // Um sensor unico, online, com comodo e sem quedas: conectividade 100,
+    // organizacao 100, estabilidade 100 e automacao sem dado. A media e 100,
+    // e nao 75 — contar o indicador ausente como zero diria que a casa vai
+    // mal quando a verdade e que nao sabemos.
+    mockStatus({ devices: [aparelho({ id: 's', isControllable: false, online: true, room: 'Sala' })] });
+    await abrirStatus();
+    expect(screen.getByText('100')).toBeInTheDocument();
+    expect(screen.getByText(/Média de 3 indicadores medidos/)).toBeInTheDocument();
+  });
+
+  test('sem nenhum dispositivo nao inventa nota', async () => {
+    mockStatus({ devices: [] });
+    await abrirStatus();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Excelente')).not.toBeInTheDocument();
+  });
+
+  test('instalacao ruim nao e rotulada como Excelente', async () => {
+    // Era exatamente o que a versao anterior fazia: tudo offline e a tela
+    // continuava dizendo "Excelente".
+    mockStatus({ devices: [
+      aparelho({ id: 'a', online: false, room: null, isControllable: true }),
+      aparelho({ id: 'b', online: false, room: null, isControllable: true }),
+    ]});
+    await abrirStatus();
+    expect(screen.queryByText('Excelente')).not.toBeInTheDocument();
+    expect(screen.getByText('Crítico')).toBeInTheDocument();
+  });
+
+  test('cada indicador mostra na tela a formula que o originou', async () => {
+    // Um numero sem origem declarada nao e informacao, e decoracao.
+    mockStatus({ devices: [aparelho()] });
+    await abrirStatus();
+    expect(screen.getByText('dispositivos online ÷ total')).toBeInTheDocument();
+    expect(screen.getByText('100 − (quedas em 7 dias × 10)')).toBeInTheDocument();
+    expect(screen.getByText('dispositivos com cômodo ÷ total')).toBeInTheDocument();
+  });
+
+  test('nao exibe indicadores que o iHome nao coleta', async () => {
+    mockStatus({ devices: [aparelho()] });
+    await abrirStatus();
+    expect(screen.queryByText('Energia')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ambiente')).not.toBeInTheDocument();
+    expect(screen.queryByText('Segurança')).not.toBeInTheDocument();
+  });
+
+  test('falha ao buscar alertas nao quebra a tela', async () => {
+    axios.get = jest.fn().mockImplementation((url) => {
+      if (url.includes('/devices'))   return Promise.resolve({ data: { result: { list: [aparelho()] } } });
+      if (url.includes('/alerts'))    return Promise.reject(new Error('500'));
+      if (url.includes('/schedules')) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: {} });
+    });
+    await abrirStatus();
+    expect(screen.getByText('Status da Instalação')).toBeInTheDocument();
+  });
+});

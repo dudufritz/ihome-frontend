@@ -142,7 +142,12 @@ body { background: #0B0F19; color: #fff; min-height: 100vh; }
     font-size: 9px;
     font-weight: 500;
     cursor: pointer;
-    padding: 4px 4px;
+    /* 48px de altura mínima é o alvo de toque recomendado pelo Material
+       Design — abaixo disso o dedo erra o botão. Com 5 itens em vez de 8,
+       cada um também ganha largura suficiente para respeitar esse mínimo. */
+    padding: 6px 4px;
+    min-height: 48px;
+    justify-content: center;
     transition: color .15s;
     flex: 1;
     min-width: 0;

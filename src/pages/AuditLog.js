@@ -148,6 +148,28 @@ function AuditLog({ session }) {
                             &middot; {e.device_name}
                           </span>
                         )}
+                        {/*
+                          O cômodo veio de um pedido de quem usa o sistema numa
+                          empresa de instalação: "como a gente instala vários
+                          iguais na mesma casa, 'Interruptor 3' não me diz onde
+                          foi". Sem o cômodo, o registro identifica o aparelho
+                          mas não o lugar — que é justamente o que se quer saber
+                          ao investigar o que aconteceu numa casa de cliente.
+
+                          Vem de details.room, gravado junto com a ação. Ler do
+                          cadastro atual seria mais simples, mas mudaria o
+                          passado: mover um dispositivo de cômodo reescreveria
+                          o histórico inteiro dele. Registro de auditoria conta
+                          o que era verdade no momento do fato.
+                        */}
+                        {e.details?.room && (
+                          <span style={{
+                            background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)',
+                            fontSize: 11, borderRadius: 6, padding: '2px 7px',
+                          }}>
+                            {e.details.room}
+                          </span>
+                        )}
                         <span style={{ background: cfg.bg, color: cfg.color, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 7px', letterSpacing: 0.4, textTransform: 'uppercase' }}>
                           {cfg.label}
                         </span>
