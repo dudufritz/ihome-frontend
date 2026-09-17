@@ -116,7 +116,7 @@ export default function App() {
         {page==='automations' && <Automations session={session} devices={devices} />}
         {page==='alerts'      && <Alerts session={session} />}
         {page==='cameras'     && <Cameras devices={devices} />}
-        {page==='status'      && <Status   devices={devices} />}
+        {page==='status'      && <Status   devices={devices} session={session} />}
         {page==='audit'       && <AuditLog session={session} />}
         {page==='help'        && <Help />}
         {page==='downloads'   && <Downloads session={session} devices={devices} />}
