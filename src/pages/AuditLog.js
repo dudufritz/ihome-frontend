@@ -107,7 +107,11 @@ function AuditLog({ session }) {
       {/* ── FILTROS ── */}
       <div className="card" style={{ marginBottom: 16, display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
         <input
-          style={inputStyle} placeholder="Buscar dispositivo, usuário, ação..."
+          // "cômodo" entrou no texto porque um campo pesquisável que ninguém
+          // sabe que é pesquisável não existe na prática. O demandante lê esta
+          // tela procurando ONDE algo aconteceu; o rótulo precisa dizer que
+          // procurar por "Quarto" funciona.
+          style={inputStyle} placeholder="Buscar dispositivo, cômodo, usuário, ação..."
           value={filters.q}
           onChange={e => setFilters(f => ({ ...f, q: e.target.value }))}
         />
