@@ -51,6 +51,18 @@ function AuditLog({ session }) {
     return () => clearTimeout(t);
   }, [filters]); // eslint-disable-line
 
+  /**
+   * Como a ação chegou ao dispositivo, a partir de `details.via`.
+   *
+   * Mapa em vez de if/else para que um valor novo gravado pelo backend não
+   * apareça cru na tela: se `via` vier com algo que não está aqui, a etiqueta
+   * simplesmente não é exibida.
+   */
+  const origemLabel = {
+    rotina: 'Rotina',
+    assistente: 'Assistente',
+  };
+
   const resultConfig = {
     success: { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'Executado' },
     error:   { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Falhou'    },
@@ -95,7 +107,11 @@ function AuditLog({ session }) {
       {/* ── FILTROS ── */}
       <div className="card" style={{ marginBottom: 16, display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
         <input
-          style={inputStyle} placeholder="Buscar dispositivo, usuário, ação..."
+          // "cômodo" entrou no texto porque um campo pesquisável que ninguém
+          // sabe que é pesquisável não existe na prática. O demandante lê esta
+          // tela procurando ONDE algo aconteceu; o rótulo precisa dizer que
+          // procurar por "Quarto" funciona.
+          style={inputStyle} placeholder="Buscar dispositivo, cômodo, usuário, ação..."
           value={filters.q}
           onChange={e => setFilters(f => ({ ...f, q: e.target.value }))}
         />
@@ -168,6 +184,29 @@ function AuditLog({ session }) {
                             fontSize: 11, borderRadius: 6, padding: '2px 7px',
                           }}>
                             {e.details.room}
+                          </span>
+                        )}
+                        {/*
+                          ORIGEM DA AÇÃO.
+
+                          Necessário desde que as rotinas agendadas passaram a
+                          ser auditadas. Sem esta etiqueta, a linha de uma
+                          rotina noturna apareceria como "Você · Ligou" às 22h —
+                          e quem lesse concluiria que a pessoa estava acordada
+                          mexendo no app. A auditoria diria a verdade sobre QUEM
+                          é responsável e mentiria sobre COMO aconteceu.
+
+                          Ausência de `via` significa ação direta no app, o caso
+                          comum: etiquetar todas as linhas só acrescentaria
+                          ruído à maioria.
+                        */}
+                        {origemLabel[e.details?.via] && (
+                          <span style={{
+                            background: 'rgba(59,126,255,0.12)', color: '#7aa7ff',
+                            fontSize: 10, fontWeight: 700, borderRadius: 6,
+                            padding: '2px 7px', letterSpacing: 0.4, textTransform: 'uppercase',
+                          }}>
+                            {origemLabel[e.details.via]}
                           </span>
                         )}
                         <span style={{ background: cfg.bg, color: cfg.color, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 7px', letterSpacing: 0.4, textTransform: 'uppercase' }}>

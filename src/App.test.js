@@ -609,6 +609,48 @@ describe('Auditoria — tela', () => {
     expect(screen.queryByText('Próxima')).not.toBeInTheDocument();
   });
 
+  // ── ORIGEM DA ACAO ──
+  // As rotinas agendadas passaram a ser auditadas. Sem a etiqueta de origem,
+  // a linha de uma rotina noturna apareceria como "Voce - Ligou" as 22h, e
+  // quem lesse concluiria que a pessoa estava acordada mexendo no app: a
+  // auditoria diria a verdade sobre QUEM responde e mentiria sobre COMO foi.
+
+  test('acao de rotina agendada aparece etiquetada como Rotina', async () => {
+    mockAuditoria({
+      entries: [entrada({ details: { summary: 'Ligou', via: 'rotina', room: 'Quarto' } })],
+    });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('Ligou')).toBeInTheDocument(), { timeout: 3000 });
+    expect(screen.getByText('Rotina')).toBeInTheDocument();
+  });
+
+  test('acao pelo assistente aparece etiquetada como Assistente', async () => {
+    mockAuditoria({
+      entries: [entrada({ details: { summary: 'Desligou', via: 'assistente' } })],
+    });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('Desligou')).toBeInTheDocument(), { timeout: 3000 });
+    expect(screen.getByText('Assistente')).toBeInTheDocument();
+  });
+
+  test('acao direta no app nao recebe etiqueta de origem', async () => {
+    // O caso comum. Etiquetar todas as linhas so acrescentaria ruido.
+    mockAuditoria({ entries: [entrada()] });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('Ligou')).toBeInTheDocument(), { timeout: 3000 });
+    expect(screen.queryByText('Rotina')).not.toBeInTheDocument();
+    expect(screen.queryByText('Assistente')).not.toBeInTheDocument();
+  });
+
+  test('origem desconhecida nao vaza valor cru na tela', async () => {
+    // Se o backend gravar um `via` novo, a etiqueta some em vez de exibir
+    // texto tecnico que nao significa nada para quem le.
+    mockAuditoria({ entries: [entrada({ details: { summary: 'Ligou', via: 'webhook_v3' } })] });
+    await abrirAuditoria();
+    await waitFor(() => expect(screen.getByText('Ligou')).toBeInTheDocument(), { timeout: 3000 });
+    expect(screen.queryByText(/webhook/i)).not.toBeInTheDocument();
+  });
+
   test('erro no backend nao quebra a tela', async () => {
     axios.get = jest.fn().mockImplementation((url) => {
       if (url.includes('/audit-log')) return Promise.reject(new Error('500'));
