@@ -63,17 +63,45 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     const token = session.access_token;
-    fetchDevices(token);
-    const interval = setInterval(() => fetchDevices(token), 30000);
-    // Verifica alertas não lidos a cada 2 minutos
+
+    // ATUALIZAÇÃO AUTOMÁTICA, SÓ COM A TELA À VISTA.
+    //
+    // Cada ciclo destes vira uma consulta à nuvem Tuya, e a avaliação
+    // gratuita dela trabalha com uma COTA MENSAL de chamadas. Uma aba
+    // esquecida aberta a noite inteira fazia 2.880 pedidos até o dia seguinte,
+    // atualizando uma tela que ninguém estava olhando — e consumia a cota do
+    // mês em poucas horas. Quando ela acabava, a API parava de responder e o
+    // app inteiro parecia quebrado.
+    //
+    // `document.hidden` é verdadeiro com a aba em segundo plano ou o celular
+    // bloqueado. Nesses momentos não há o que mostrar, então não há o que
+    // perguntar. Ao voltar, buscamos na hora: quem reabre o app quer o estado
+    // de agora, não o de meia hora atrás.
+    const visivel = () => !document.hidden;
+
+    const atualizarSeVisivel = () => { if (visivel()) fetchDevices(token); };
+
     const checkAlerts = () => {
+      if (!visivel()) return;
       axios.get(`${API}/alerts`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => setUnreadAlerts(r.data.filter(a => !a.read).length))
         .catch(() => {});
     };
+
+    const aoVoltar = () => { if (visivel()) { fetchDevices(token); checkAlerts(); } };
+
+    fetchDevices(token);
     checkAlerts();
+
+    const interval = setInterval(atualizarSeVisivel, 30000);
     const alertInterval = setInterval(checkAlerts, 2 * 60 * 1000);
-    return () => { clearInterval(interval); clearInterval(alertInterval); };
+    document.addEventListener('visibilitychange', aoVoltar);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(alertInterval);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
   }, [session]);
 
   const handleToggle = async (id, currentlyOn, ownerEmail) => {
