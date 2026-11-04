@@ -42,18 +42,14 @@ function Login() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [cpf, setCpf] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const formatCpf = v => {
-    v = v.replace(/\D/g, '');
-    if (v.length <= 3) return v;
-    if (v.length <= 6) return v.slice(0,3)+'.'+v.slice(3);
-    if (v.length <= 9) return v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
-    return v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);
-  };
+  // O cadastro pedia CPF, e o backend gravava sem nunca usar. Dado pessoal
+  // sem finalidade é o que a LGPD proíbe (art. 6º, III, necessidade) — e,
+  // se vazasse, facilitaria fraude. Campo removido (issue #8 do backend,
+  // aberta pelo @pdrollucas). Menos campos também é menos atrito no cadastro.
   const formatPhone = v => {
     v = v.replace(/\D/g, '');
     if (v.length <= 2) return v;
@@ -72,11 +68,10 @@ function Login() {
   const handleRegister = async e => {
     e.preventDefault();
     setLoading(true); setError(''); setSuccess('');
-    if (cpf.replace(/\D/g,'').length !== 11) { setError('CPF inválido.'); setLoading(false); return; }
     if (phone.replace(/\D/g,'').length < 10) { setError('Telefone inválido.'); setLoading(false); return; }
     const { error } = await auth.signUp({
       email, password,
-      options: { data: { full_name: fullName, phone: phone.replace(/\D/g,''), cpf: cpf.replace(/\D/g,'') } }
+      options: { data: { full_name: fullName, phone: phone.replace(/\D/g,'') } }
     });
     if (error) { setError(error.message); setLoading(false); return; }
     setSuccess('Conta criada! Verifique seu e-mail para confirmar o cadastro.');
@@ -153,16 +148,12 @@ function Login() {
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
             </div>
           )}
-          {mode === 'register' && <>
-            <div className="login-field">
-              <label>CPF</label>
-              <input type="text" value={cpf} onChange={e => setCpf(formatCpf(e.target.value))} placeholder="000.000.000-00" maxLength={14} required />
-            </div>
+          {mode === 'register' && (
             <div className="login-field">
               <label>Telefone</label>
               <input type="text" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} required />
             </div>
-          </>}
+          )}
           {mode !== 'forgot' && (
             <div className="login-field">
               <label>{mode === 'reset' ? 'Nova senha' : 'Senha'}</label>

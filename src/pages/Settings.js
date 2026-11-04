@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API } from '../auth';
+import { API, auth } from '../auth';
 import DeviceIcon from '../components/DeviceIcon';
 import PasswordField from '../components/PasswordField';
 import { urlBase64ToUint8Array } from '../utils/push';
@@ -646,12 +646,115 @@ function Settings({ session, onLogout }) {
         </div>
       </div>
 
+      {/* Excluir conta — fica por último e separado do "Sair" de propósito:
+          as duas ações têm a mesma cor e estão a um toque de distância, e
+          trocar uma pela outra por engano não tem volta. */}
+      <DeleteAccountCard />
+
       {/* Rodapé com versão */}
       <div style={{ textAlign: 'center', marginTop: 24, paddingBottom: 8 }}>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.05em' }}>
           iHome Residencial · v0.8.0
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Cartão de exclusão definitiva da conta.
+ *
+ * A LGPD (art. 18, VI) garante ao titular o direito de eliminar os próprios
+ * dados. O fluxo tem três barreiras contra o clique por engano, porque é a
+ * única ação do app que não se desfaz:
+ *
+ *   1. O botão só ABRE a confirmação — não exclui nada.
+ *   2. A confirmação lista o que vai ser apagado, para a decisão ser
+ *      informada (inclusive que os convidados da casa perdem o acesso).
+ *   3. É preciso digitar a senha. O backend confere de novo; aqui ela só
+ *      habilita o botão final.
+ *
+ * Depois do sucesso, `auth.deleteAccount` limpa a sessão, o App.js recebe
+ * SIGNED_OUT e volta sozinho para a tela de login.
+ */
+function DeleteAccountCard() {
+  const [aberto, setAberto] = useState(false);
+  const [senha, setSenha] = useState('');
+  const [excluindo, setExcluindo] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const cancelar = () => { setAberto(false); setSenha(''); setErro(''); };
+
+  const excluir = async (e) => {
+    e.preventDefault();
+    setExcluindo(true);
+    setErro('');
+    const { error } = await auth.deleteAccount(senha);
+    if (error) {
+      // Senha errada, rede fora: a conta continua existindo, a tela também.
+      setErro(error.message);
+      setExcluindo(false);
+    }
+    // Sucesso: nada a fazer aqui. A sessão foi limpa e o App desmonta esta
+    // tela para mostrar o login.
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 16, border: '1px solid rgba(239,68,68,0.25)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#ef4444', marginBottom: 3 }}>Excluir conta</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+            Apaga sua conta e todos os seus dados de forma permanente.
+          </div>
+        </div>
+        {!aberto && (
+          <button onClick={() => setAberto(true)}
+            style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+            Excluir conta
+          </button>
+        )}
+      </div>
+
+      {aberto && (
+        <form onSubmit={excluir} style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 10 }}>
+            Isto <strong style={{ color: '#ef4444' }}>não pode ser desfeito</strong>. Serão apagados:
+          </div>
+          <ul style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, margin: '0 0 14px', paddingLeft: 18 }}>
+            <li>sua conta e seus dados de cadastro</li>
+            <li>dispositivos, cômodos, rotinas e alertas</li>
+            <li>as credenciais da Tuya guardadas no iHome</li>
+            <li>o histórico de auditoria da sua casa</li>
+            <li>os compartilhamentos — quem você convidou perde o acesso</li>
+          </ul>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5, marginBottom: 14 }}>
+            Seus aparelhos continuam funcionando no app Smart Life — só o vínculo com o iHome é removido.
+          </div>
+
+          <label htmlFor="senha-exclusao" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', display: 'block', marginBottom: 6 }}>
+            Digite sua senha para confirmar
+          </label>
+          <input id="senha-exclusao" type="password" value={senha} autoComplete="current-password"
+            onChange={(e) => setSenha(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', background: '#141929', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 12px', color: '#fff', fontSize: 14, marginBottom: 12 }} />
+
+          {erro && <div className="login-error" style={{ marginBottom: 12 }}>{erro}</div>}
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button type="button" onClick={cancelar} disabled={excluindo}
+              style={{ background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontSize: 13 }}>
+              Cancelar
+            </button>
+            {/* Sem senha digitada o botão nem habilita: evita o envio vazio
+                que voltaria "senha incorreta" sem a pessoa ter tentado. */}
+            <button type="submit" disabled={!senha || excluindo}
+              style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: senha && !excluindo ? 'pointer' : 'not-allowed', opacity: senha && !excluindo ? 1 : 0.5, fontSize: 13, fontWeight: 700 }}>
+              {excluindo ? 'Excluindo...' : 'Excluir definitivamente'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

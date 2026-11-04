@@ -24,6 +24,7 @@ jest.mock('axios', () => {
   const mock = jest.fn();
   mock.post = jest.fn();
   mock.get = jest.fn();
+  mock.delete = jest.fn();
   mock.interceptors = { response: { use: jest.fn() } };
   return mock;
 });
@@ -187,7 +188,7 @@ describe('signInWithPassword', () => {
 
 describe('signUp', () => {
   test('achata os campos extras de options.data no corpo da requisição', async () => {
-    // A tela manda nome, CPF e telefone dentro de options.data, seguindo a
+    // A tela manda nome e telefone dentro de options.data, seguindo a
     // convenção dos clientes de identidade. O backend espera tudo no mesmo
     // nível — a tradução acontece aqui, e é o que este teste guarda.
     axios.post.mockResolvedValueOnce(respostaSessao());
@@ -195,16 +196,32 @@ describe('signUp', () => {
     await auth.signUp({
       email: 'a@b.c',
       password: 'segredo123',
-      options: { data: { full_name: 'Eduardo', cpf: '000', phone: '47999' } },
+      options: { data: { full_name: 'Eduardo', phone: '47999' } },
     });
 
     expect(axios.post).toHaveBeenCalledWith(`${API}/auth/register`, {
       email: 'a@b.c',
       password: 'segredo123',
       full_name: 'Eduardo',
-      cpf: '000',
       phone: '47999',
     });
+  });
+
+  test('campo extra desconhecido NÃO vai para o servidor', async () => {
+    // Os campos são escolhidos um a um, não repassados com `...extras`. Foi
+    // assim que o CPF saiu do sistema: se a tela ainda mandasse, ele parava
+    // aqui. Nenhum dado pessoal novo chega ao backend sem alguém decidir.
+    axios.post.mockResolvedValueOnce(respostaSessao());
+
+    await auth.signUp({
+      email: 'a@b.c',
+      password: 'segredo123',
+      options: { data: { full_name: 'Eduardo', cpf: '12345678900', rg: '1234' } },
+    });
+
+    const corpo = axios.post.mock.calls[0][1];
+    expect(corpo).not.toHaveProperty('cpf');
+    expect(corpo).not.toHaveProperty('rg');
   });
 
   test('sem options não quebra', async () => {
@@ -280,6 +297,65 @@ describe('redefinição de senha', () => {
 // ═══════════════════════════════════════════════════════════════
 //  RENOVAÇÃO SILENCIOSA — a parte menos óbvia do arquivo
 // ═══════════════════════════════════════════════════════════════
+describe('deleteAccount — exclusão de conta', () => {
+  function comSessao() {
+    localStorage.setItem(CHAVE, JSON.stringify({
+      access_token: 'tok-atual', refresh_token: 'r', user: { email: 'a@b.c' },
+    }));
+    carregar();
+  }
+
+  test('manda DELETE /auth/me com o token e a senha no corpo', async () => {
+    // axios.delete leva o corpo em `data`. Passar como segundo argumento
+    // direto, como no post, faria a senha nunca chegar ao servidor.
+    comSessao();
+    axios.delete.mockResolvedValueOnce({ data: { success: true } });
+
+    await auth.deleteAccount('minha-senha');
+
+    expect(axios.delete).toHaveBeenCalledWith(`${API}/auth/me`, {
+      headers: { Authorization: 'Bearer tok-atual' },
+      data: { password: 'minha-senha' },
+    });
+  });
+
+  test('sucesso limpa a sessão e avisa SIGNED_OUT', async () => {
+    // É o SIGNED_OUT que faz o App.js trocar para a tela de login.
+    comSessao();
+    const ouvinte = jest.fn();
+    auth.onAuthStateChange(ouvinte);
+    axios.delete.mockResolvedValueOnce({ data: { success: true } });
+
+    const { error } = await auth.deleteAccount('minha-senha');
+
+    expect(error).toBeNull();
+    expect(localStorage.getItem(CHAVE)).toBeNull();
+    expect(ouvinte).toHaveBeenCalledWith('SIGNED_OUT', null);
+  });
+
+  test('senha errada NÃO derruba a sessão', async () => {
+    // Ao contrário do signOut. A conta continua existindo: deslogar aqui
+    // deixaria a pessoa achando que apagou uma conta que está lá.
+    comSessao();
+    axios.delete.mockRejectedValueOnce(erroDoServidor(401, { error: 'Senha incorreta.' }));
+
+    const { error } = await auth.deleteAccount('errada');
+
+    expect(error.message).toBe('Senha incorreta.');
+    expect(JSON.parse(localStorage.getItem(CHAVE)).access_token).toBe('tok-atual');
+  });
+
+  test('rede fora também mantém a sessão e explica', async () => {
+    comSessao();
+    axios.delete.mockRejectedValueOnce({ request: {} });
+
+    const { error } = await auth.deleteAccount('minha-senha');
+
+    expect(error.message).toMatch(/conex[aã]o/i);
+    expect(localStorage.getItem(CHAVE)).not.toBeNull();
+  });
+});
+
 describe('interceptor de renovação', () => {
   function comSessao() {
     localStorage.setItem(CHAVE, JSON.stringify({
