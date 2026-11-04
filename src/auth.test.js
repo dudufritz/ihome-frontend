@@ -196,14 +196,13 @@ describe('signUp', () => {
     await auth.signUp({
       email: 'a@b.c',
       password: 'segredo123',
-      options: { data: { full_name: 'Eduardo', phone: '47999' } },
+      options: { data: { full_name: 'Eduardo' } },
     });
 
     expect(axios.post).toHaveBeenCalledWith(`${API}/auth/register`, {
       email: 'a@b.c',
       password: 'segredo123',
       full_name: 'Eduardo',
-      phone: '47999',
     });
   });
 
@@ -216,11 +215,12 @@ describe('signUp', () => {
     await auth.signUp({
       email: 'a@b.c',
       password: 'segredo123',
-      options: { data: { full_name: 'Eduardo', cpf: '12345678900', rg: '1234' } },
+      options: { data: { full_name: 'Eduardo', cpf: '12345678900', phone: '47999', rg: '1234' } },
     });
 
     const corpo = axios.post.mock.calls[0][1];
     expect(corpo).not.toHaveProperty('cpf');
+    expect(corpo).not.toHaveProperty('phone');
     expect(corpo).not.toHaveProperty('rg');
   });
 
@@ -297,6 +297,45 @@ describe('redefinição de senha', () => {
 // ═══════════════════════════════════════════════════════════════
 //  RENOVAÇÃO SILENCIOSA — a parte menos óbvia do arquivo
 // ═══════════════════════════════════════════════════════════════
+describe('exportData — baixar meus dados', () => {
+  beforeEach(() => {
+    localStorage.setItem(CHAVE, JSON.stringify({ access_token: 'tok-atual', refresh_token: 'r' }));
+    carregar();
+    // O jsdom não implementa URL.createObjectURL; o download é simulado.
+    global.URL.createObjectURL = jest.fn(() => 'blob:fake');
+    global.URL.revokeObjectURL = jest.fn();
+  });
+
+  test('pede GET /auth/me/dados com o token', async () => {
+    axios.get.mockResolvedValueOnce({ data: { conta: { email: 'a@b.c' } } });
+    await auth.exportData();
+    expect(axios.get).toHaveBeenCalledWith(`${API}/auth/me/dados`, {
+      headers: { Authorization: 'Bearer tok-atual' },
+    });
+  });
+
+  test('dispara o download com nome datado e libera a memória depois', async () => {
+    axios.get.mockResolvedValueOnce({ data: { conta: { email: 'a@b.c' } } });
+    const clique = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    const { error } = await auth.exportData();
+
+    expect(error).toBeNull();
+    expect(clique).toHaveBeenCalledTimes(1);
+    const link = clique.mock.instances[0];
+    expect(link.download).toMatch(/^ihome-meus-dados-\d{4}-\d{2}-\d{2}\.json$/);
+    // Sem o revoke, cada download deixaria o arquivo inteiro preso na memória da aba.
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake');
+    clique.mockRestore();
+  });
+
+  test('falha de rede vira mensagem legível', async () => {
+    axios.get.mockRejectedValueOnce({ request: {} });
+    const { error } = await auth.exportData();
+    expect(error.message).toMatch(/conex[aã]o/i);
+  });
+});
+
 describe('deleteAccount — exclusão de conta', () => {
   function comSessao() {
     localStorage.setItem(CHAVE, JSON.stringify({

@@ -634,6 +634,11 @@ function Settings({ session, onLogout }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 3 }}>Conta</div>
+            {/* O nome aparece aqui — é a finalidade declarada na Política de
+                Privacidade para guardá-lo. Sem nome, mostra só o e-mail. */}
+            {session?.user?.full_name && (
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>{session.user.full_name}</div>
+            )}
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {session?.user?.email}
             </div>
@@ -649,6 +654,7 @@ function Settings({ session, onLogout }) {
       {/* Excluir conta — fica por último e separado do "Sair" de propósito:
           as duas ações têm a mesma cor e estão a um toque de distância, e
           trocar uma pela outra por engano não tem volta. */}
+      <MyDataCard />
       <DeleteAccountCard />
 
       {/* Rodapé com versão */}
@@ -657,6 +663,46 @@ function Settings({ session, onLogout }) {
           iHome Residencial · v0.8.0
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Cartão "Seus dados": baixar tudo o que o iHome guarda, e ler a política.
+ *
+ * LGPD art. 18, II (acesso) e V (portabilidade). Fica logo antes de "Excluir
+ * conta" de propósito: quem pensa em sair geralmente quer levar os dados antes.
+ */
+function MyDataCard() {
+  const [baixando, setBaixando] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const baixar = async () => {
+    setBaixando(true);
+    setErro('');
+    const { error } = await auth.exportData();
+    if (error) setErro(error.message);
+    setBaixando(false);
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 3 }}>Seus dados</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+            Baixe um arquivo com tudo o que o iHome guarda sobre você.{' '}
+            <a href="/privacidade" target="_blank" rel="noopener noreferrer" style={{ color: '#3B7EFF' }}>
+              Política de Privacidade
+            </a>
+          </div>
+        </div>
+        <button onClick={baixar} disabled={baixando}
+          style={{ background: 'rgba(59,126,255,0.15)', color: '#3B7EFF', border: '1px solid rgba(59,126,255,0.25)', borderRadius: 10, padding: '8px 16px', cursor: baixando ? 'wait' : 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+          {baixando ? 'Gerando...' : 'Baixar meus dados'}
+        </button>
+      </div>
+      {erro && <div className="login-error" style={{ marginTop: 12 }}>{erro}</div>}
     </div>
   );
 }
