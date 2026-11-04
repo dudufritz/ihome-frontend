@@ -104,8 +104,8 @@ describe('App — tela de login', () => {
 
   test('campo senha inicia como password', async () => {
     render(<App />);
-    await waitFor(() => screen.getByPlaceholderText('Mínimo 6 caracteres'), { timeout: 3000 });
-    expect(screen.getByPlaceholderText('Mínimo 6 caracteres')).toHaveAttribute('type', 'password');
+    await waitFor(() => screen.getByPlaceholderText('Mínimo 8 caracteres'), { timeout: 3000 });
+    expect(screen.getByPlaceholderText('Mínimo 8 caracteres')).toHaveAttribute('type', 'password');
   });
 });
 
@@ -113,18 +113,18 @@ describe('App — tela de login', () => {
 describe('PasswordField', () => {
   test('olhinho revela senha', async () => {
     render(<App />);
-    await waitFor(() => screen.getByPlaceholderText('Mínimo 6 caracteres'), { timeout: 3000 });
+    await waitFor(() => screen.getByPlaceholderText('Mínimo 8 caracteres'), { timeout: 3000 });
     fireEvent.click(document.querySelector('.pw-eye'));
-    expect(screen.getByPlaceholderText('Mínimo 6 caracteres')).toHaveAttribute('type', 'text');
+    expect(screen.getByPlaceholderText('Mínimo 8 caracteres')).toHaveAttribute('type', 'text');
   });
 
   test('segundo clique volta a ocultar', async () => {
     render(<App />);
-    await waitFor(() => screen.getByPlaceholderText('Mínimo 6 caracteres'), { timeout: 3000 });
+    await waitFor(() => screen.getByPlaceholderText('Mínimo 8 caracteres'), { timeout: 3000 });
     const btn = document.querySelector('.pw-eye');
     fireEvent.click(btn);
     fireEvent.click(btn);
-    expect(screen.getByPlaceholderText('Mínimo 6 caracteres')).toHaveAttribute('type', 'password');
+    expect(screen.getByPlaceholderText('Mínimo 8 caracteres')).toHaveAttribute('type', 'password');
   });
 });
 
@@ -169,7 +169,7 @@ describe('Login — submit', () => {
     render(<App />);
     await waitFor(() => screen.getByPlaceholderText('seu@email.com'), { timeout: 3000 });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'u@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('Mínimo 6 caracteres'), { target: { value: '123456' } });
+    fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: '123456' } });
     await act(async () => { fireEvent.click(screen.getByText('Entrar')); });
     expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'u@t.com', password: '123456' });
   });
@@ -179,7 +179,7 @@ describe('Login — submit', () => {
     render(<App />);
     await waitFor(() => screen.getByPlaceholderText('seu@email.com'), { timeout: 3000 });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'b@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('Mínimo 6 caracteres'), { target: { value: 'wrong' } });
+    fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'wrong' } });
     await act(async () => { fireEvent.click(screen.getByText('Entrar')); });
     await waitFor(() => expect(screen.getByText('E-mail ou senha incorretos.')).toBeInTheDocument());
   });
@@ -216,7 +216,7 @@ describe('Login — registro', () => {
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
     fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '529.982.247-25' } });
     fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
-    fireEvent.change(screen.getByPlaceholderText('Mínimo 6 caracteres'), { target: { value: 'senha123' } });
+    fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
     expect(auth.signUp).toHaveBeenCalled();
   });
@@ -226,7 +226,7 @@ describe('Login — registro', () => {
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
     fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '529.982.247-25' } });
     fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
-    fireEvent.change(screen.getByPlaceholderText('Mínimo 6 caracteres'), { target: { value: 'senha123' } });
+    fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
     await waitFor(() => expect(screen.getByText(/Verifique seu e-mail/)).toBeInTheDocument());
   });
@@ -237,7 +237,7 @@ describe('Login — registro', () => {
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
     fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '529.982.247-25' } });
     fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
-    fireEvent.change(screen.getByPlaceholderText('Mínimo 6 caracteres'), { target: { value: 'senha123' } });
+    fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
     await waitFor(() => expect(screen.getByText('Email taken')).toBeInTheDocument());
   });

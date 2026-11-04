@@ -190,6 +190,10 @@ body { background: #0B0F19; color: #fff; min-height: 100vh; }
 .login-btn:hover { background: #2d6fee; }
 .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .login-error { background: rgba(239,68,68,0.1); color: #f87171; border-radius: 8px; padding: 10px 14px; font-size: 13px; }.login-success { background: rgba(34,197,94,0.1); color: #22c55e; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+/* Texto de apoio no topo do formulário — hoje só o modo de redefinir senha
+   usa, para dizer o que a pessoa está fazendo ali. Ela chegou por um link de
+   e-mail, não por um clique no app, então a tela precisa se apresentar. */
+.login-intro { color: rgba(255,255,255,0.45); font-size: 13px; line-height: 1.5; margin: 0 0 4px; text-align: center; }
 .login-links { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
 .login-links button { background: none; border: none; color: rgba(255,255,255,0.35); font-size: 12px; cursor: pointer; transition: color .15s; }
 .login-links button:hover { color: #3B7EFF; }
