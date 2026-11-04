@@ -194,16 +194,18 @@ describe('Login — registro', () => {
     await waitFor(() => screen.getByPlaceholderText('Seu nome completo'));
   });
 
-  test('valida CPF inválido', async () => {
-    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'n@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '123' } });
-    await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
-    await waitFor(() => expect(screen.getByText('CPF inválido.')).toBeInTheDocument());
+  test('o cadastro NÃO pede CPF', () => {
+    // O CPF era coletado e nunca usado — dado pessoal sem finalidade, o que a
+    // LGPD proíbe (art. 6º, III). Removido na issue #8 do backend.
+    expect(screen.queryByText('CPF')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('000.000.000-00')).not.toBeInTheDocument();
   });
 
-  test('formata CPF', () => {
-    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '52998224725' } });
-    expect(screen.getByPlaceholderText('000.000.000-00').value).toBe('529.982.247-25');
+  test('valida telefone curto', async () => {
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'n@t.com' } });
+    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '4899' } });
+    await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
+    await waitFor(() => expect(screen.getByText('Telefone inválido.')).toBeInTheDocument());
   });
 
   test('formata telefone', () => {
@@ -214,7 +216,6 @@ describe('Login — registro', () => {
   test('chama signUp com dados válidos', async () => {
     fireEvent.change(screen.getByPlaceholderText('Seu nome completo'), { target: { value: 'Eduardo Fritz' } });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '529.982.247-25' } });
     fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
@@ -224,7 +225,6 @@ describe('Login — registro', () => {
   test('exibe mensagem de sucesso após signUp', async () => {
     fireEvent.change(screen.getByPlaceholderText('Seu nome completo'), { target: { value: 'Eduardo Fritz' } });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '529.982.247-25' } });
     fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
@@ -235,7 +235,6 @@ describe('Login — registro', () => {
     auth.signUp.mockResolvedValueOnce({ error: { message: 'Email taken' } });
     fireEvent.change(screen.getByPlaceholderText('Seu nome completo'), { target: { value: 'Eduardo Fritz' } });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('000.000.000-00'), { target: { value: '529.982.247-25' } });
     fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });

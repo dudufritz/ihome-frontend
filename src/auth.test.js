@@ -188,7 +188,7 @@ describe('signInWithPassword', () => {
 
 describe('signUp', () => {
   test('achata os campos extras de options.data no corpo da requisição', async () => {
-    // A tela manda nome, CPF e telefone dentro de options.data, seguindo a
+    // A tela manda nome e telefone dentro de options.data, seguindo a
     // convenção dos clientes de identidade. O backend espera tudo no mesmo
     // nível — a tradução acontece aqui, e é o que este teste guarda.
     axios.post.mockResolvedValueOnce(respostaSessao());
@@ -196,16 +196,32 @@ describe('signUp', () => {
     await auth.signUp({
       email: 'a@b.c',
       password: 'segredo123',
-      options: { data: { full_name: 'Eduardo', cpf: '000', phone: '47999' } },
+      options: { data: { full_name: 'Eduardo', phone: '47999' } },
     });
 
     expect(axios.post).toHaveBeenCalledWith(`${API}/auth/register`, {
       email: 'a@b.c',
       password: 'segredo123',
       full_name: 'Eduardo',
-      cpf: '000',
       phone: '47999',
     });
+  });
+
+  test('campo extra desconhecido NÃO vai para o servidor', async () => {
+    // Os campos são escolhidos um a um, não repassados com `...extras`. Foi
+    // assim que o CPF saiu do sistema: se a tela ainda mandasse, ele parava
+    // aqui. Nenhum dado pessoal novo chega ao backend sem alguém decidir.
+    axios.post.mockResolvedValueOnce(respostaSessao());
+
+    await auth.signUp({
+      email: 'a@b.c',
+      password: 'segredo123',
+      options: { data: { full_name: 'Eduardo', cpf: '12345678900', rg: '1234' } },
+    });
+
+    const corpo = axios.post.mock.calls[0][1];
+    expect(corpo).not.toHaveProperty('cpf');
+    expect(corpo).not.toHaveProperty('rg');
   });
 
   test('sem options não quebra', async () => {

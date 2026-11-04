@@ -222,8 +222,12 @@ export const auth = {
   },
 
   /**
-   * Cadastro. Os campos extras (nome, CPF, telefone) vêm em options.data,
+   * Cadastro. Os campos extras (nome, telefone) vêm em options.data,
    * seguindo a convenção que a tela de registro já usava.
+   *
+   * Os campos são escolhidos um a um, e não repassados com `...extras`: assim
+   * nenhum dado que a tela coloque em options.data vai parar no servidor sem
+   * alguém decidir isso aqui. Foi assim que o CPF saiu do sistema (issue #8).
    */
   async signUp({ email, password, options }) {
     const extras = options?.data || {};
@@ -232,7 +236,6 @@ export const auth = {
         email,
         password,
         full_name: extras.full_name,
-        cpf: extras.cpf,
         phone: extras.phone,
       });
       gravarSessao(montarSessao(r.data));
