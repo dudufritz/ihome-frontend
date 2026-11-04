@@ -279,4 +279,31 @@ export const auth = {
     gravarSessao(null);
     return {};
   },
+
+  /**
+   * Exclui a conta de forma definitiva (LGPD, art. 18, VI).
+   *
+   * Pede a senha mesmo com a sessão aberta: o token prova que a sessão é
+   * válida, não que é o dono quem está na frente da tela. Ver a rota
+   * DELETE /auth/me no backend.
+   *
+   * Diferente do signOut, aqui a sessão local SÓ é limpa se o backend
+   * confirmar. Se a senha estiver errada ou a rede cair, a conta continua
+   * existindo — e derrubar a sessão nesse caso deixaria a pessoa deslogada
+   * de uma conta que ela acha que apagou, mas que está lá.
+   */
+  async deleteAccount(password) {
+    const atual = lerSessao();
+    try {
+      // axios.delete leva o corpo em `data`, não como segundo argumento.
+      await axios.delete(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${atual?.access_token}` },
+        data: { password },
+      });
+    } catch (err) {
+      return { error: extrairErro(err, 'Não foi possível excluir a conta.') };
+    }
+    gravarSessao(null);
+    return { error: null };
+  },
 };
