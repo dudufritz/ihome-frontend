@@ -201,22 +201,38 @@ describe('Login — registro', () => {
     expect(screen.queryByPlaceholderText('000.000.000-00')).not.toBeInTheDocument();
   });
 
-  test('valida telefone curto', async () => {
-    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'n@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '4899' } });
-    await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
-    await waitFor(() => expect(screen.getByText('Telefone inválido.')).toBeInTheDocument());
+  test('o cadastro NÃO pede telefone', () => {
+    // Mesmo caso do CPF: exigido no cadastro e nunca usado (LGPD art. 6º, III).
+    expect(screen.queryByText('Telefone')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('(00) 00000-0000')).not.toBeInTheDocument();
   });
 
-  test('formata telefone', () => {
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '48999887766' } });
-    expect(screen.getByPlaceholderText('(00) 00000-0000').value).toBe('(48) 99988-7766');
+  test('o nome é opcional', () => {
+    // A política declara o nome como opcional; o campo precisa concordar.
+    expect(screen.getByPlaceholderText('Seu nome completo')).not.toBeRequired();
+  });
+
+  test('avisa da Política de Privacidade antes de criar a conta', () => {
+    // LGPD art. 9º: a pessoa precisa poder ler como os dados serão tratados
+    // ANTES de entregá-los. Abre em outra aba para não perder o formulário.
+    const links = screen.getAllByRole('link', { name: 'Política de Privacidade' });
+    const doAviso = links.find((a) => a.getAttribute('target') === '_blank');
+    expect(doAviso).toHaveAttribute('href', '/privacidade');
+    expect(screen.getByText(/Ao criar a conta, você concorda/)).toBeInTheDocument();
+  });
+
+  test('cadastro sem nome também funciona', async () => {
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
+    await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
+    expect(auth.signUp).toHaveBeenCalledWith(expect.objectContaining({
+      options: { data: { full_name: undefined } },
+    }));
   });
 
   test('chama signUp com dados válidos', async () => {
     fireEvent.change(screen.getByPlaceholderText('Seu nome completo'), { target: { value: 'Eduardo Fritz' } });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
     expect(auth.signUp).toHaveBeenCalled();
@@ -225,7 +241,6 @@ describe('Login — registro', () => {
   test('exibe mensagem de sucesso após signUp', async () => {
     fireEvent.change(screen.getByPlaceholderText('Seu nome completo'), { target: { value: 'Eduardo Fritz' } });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
     await waitFor(() => expect(screen.getByText(/Verifique seu e-mail/)).toBeInTheDocument());
@@ -235,7 +250,6 @@ describe('Login — registro', () => {
     auth.signUp.mockResolvedValueOnce({ error: { message: 'Email taken' } });
     fireEvent.change(screen.getByPlaceholderText('Seu nome completo'), { target: { value: 'Eduardo Fritz' } });
     fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'e@t.com' } });
-    fireEvent.change(screen.getByPlaceholderText('(00) 00000-0000'), { target: { value: '(48) 99988-7766' } });
     fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'senha123' } });
     await act(async () => { fireEvent.click(screen.getByText('Criar conta')); });
     await waitFor(() => expect(screen.getByText('Email taken')).toBeInTheDocument());

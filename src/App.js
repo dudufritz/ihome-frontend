@@ -16,6 +16,7 @@ import Cameras from './pages/Cameras';
 import Status from './pages/Status';
 import Help from './pages/Help';
 import Downloads from './pages/Downloads';
+import Privacidade from './pages/Privacidade';
 
 
 // ── APP PRINCIPAL ─────────────────────────────────────────────
@@ -156,6 +157,12 @@ export default function App() {
       <button onClick={() => setInviteToast(null)} style={{ marginLeft:12, background:'none', border:'none', color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:16 }}>✕</button>
     </div>
   );
+
+  // A Política de Privacidade é pública: abre com ou sem sessão, antes de
+  // qualquer outra decisão. A pessoa precisa poder lê-la ANTES de criar a
+  // conta (LGPD art. 9º). O Static Web App entrega o index.html para
+  // /privacidade pelo navigationFallback, e aqui o App escolhe a página.
+  if (window.location.pathname === '/privacidade') return <Privacidade />;
 
   if (authLoading) return (
     <div style={{ background: '#0B0F19', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>

@@ -222,12 +222,12 @@ export const auth = {
   },
 
   /**
-   * Cadastro. Os campos extras (nome, telefone) vêm em options.data,
-   * seguindo a convenção que a tela de registro já usava.
+   * Cadastro. O campo extra (nome, opcional) vem em options.data, seguindo a
+   * convenção que a tela de registro já usava.
    *
    * Os campos são escolhidos um a um, e não repassados com `...extras`: assim
    * nenhum dado que a tela coloque em options.data vai parar no servidor sem
-   * alguém decidir isso aqui. Foi assim que o CPF saiu do sistema (issue #8).
+   * alguém decidir isso aqui. Foi assim que CPF e telefone saíram do sistema.
    */
   async signUp({ email, password, options }) {
     const extras = options?.data || {};
@@ -236,7 +236,6 @@ export const auth = {
         email,
         password,
         full_name: extras.full_name,
-        phone: extras.phone,
       });
       gravarSessao(montarSessao(r.data));
       return { error: null };
@@ -281,6 +280,36 @@ export const auth = {
     }
     gravarSessao(null);
     return {};
+  },
+
+  /**
+   * Baixa tudo o que o iHome guarda sobre a pessoa (LGPD art. 18, II e V).
+   *
+   * O arquivo é montado no backend (GET /auth/me/dados), sem senhas nem
+   * segredos. Aqui só transformamos a resposta num download: um Blob vira um
+   * endereço temporário no navegador, um link invisível é clicado, e o
+   * endereço é liberado logo depois para não ficar ocupando memória.
+   */
+  async exportData() {
+    const atual = lerSessao();
+    try {
+      const r = await axios.get(`${API}/auth/me/dados`, {
+        headers: { Authorization: `Bearer ${atual?.access_token}` },
+      });
+      const dia = new Date().toISOString().slice(0, 10);
+      const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ihome-meus-dados-${dia}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return { error: null };
+    } catch (err) {
+      return { error: extrairErro(err, 'Não foi possível baixar os dados.') };
+    }
   },
 
   /**
